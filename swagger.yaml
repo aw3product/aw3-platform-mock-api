@@ -1,0 +1,2213 @@
+openapi: 3.0.3
+info:
+  title: AW3 Platform API
+  description: |
+    Backend API for AW3 Platform MVP - A Web3-native creator economy platform.
+    
+    ## Authentication
+    Uses wallet-based authentication with JWT tokens. Users sign messages with their Web3 wallet.
+    
+    ## User Roles
+    - **CREATOR**: Content creators who participate in campaigns
+    - **PROJECT**: Project owners who create and manage campaigns
+    - **ADMIN**: Platform administrators
+    - **VALIDATOR**: Campaign validators
+    
+    ## Key Features
+    - Wallet-based DID authentication
+    - Campaign management with escrow
+    - CVPI (Creator Value Performance Index) scoring
+    - Reputation system with SPC NFTs
+  version: 1.0.0
+  contact:
+    name: Allweb3 Labs
+    url: https://allweb3.com
+  license:
+    name: MIT
+
+servers:
+  - url: https://aw3-api-mock.onrender.com/api
+    description: Mock API Server
+  - url: http://localhost:3000/api
+    description: Local Development
+
+tags:
+  - name: Auth
+    description: Wallet-based authentication endpoints
+  - name: Creator Profile
+    description: Creator profile management
+  - name: Creator Campaigns
+    description: Campaign discovery for creators
+  - name: Creator Applications
+    description: Application management for creators
+  - name: Creator Deliverables
+    description: Deliverable submission for creators
+  - name: Creator Earnings
+    description: Earnings and payments for creators
+  - name: Creator CVPI
+    description: CVPI score and analytics for creators
+  - name: Creator Reputation
+    description: Reputation management for creators
+  - name: Project Profile
+    description: Project profile management
+  - name: Project Campaigns
+    description: Campaign management for projects
+  - name: Project Applications
+    description: Application review for projects
+  - name: Project Finance
+    description: Fee estimation and escrow management
+  - name: Project Payments
+    description: Payment processing for projects
+  - name: Admin Campaigns
+    description: Campaign administration
+  - name: Admin Users
+    description: User administration
+  - name: Admin Disputes
+    description: Dispute resolution
+  - name: Admin Analytics
+    description: Platform analytics
+  - name: Public Marketplace
+    description: Public marketplace endpoints
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from wallet authentication
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    WalletConnectRequest:
+      type: object
+      required:
+        - walletAddress
+      properties:
+        walletAddress:
+          type: string
+          example: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
+        chainId:
+          type: string
+          example: "1"
+        walletType:
+          type: string
+          enum: [MetaMask, WalletConnect, Coinbase, Rainbow]
+          example: MetaMask
+
+    WalletConnectResponse:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+        nonce:
+          type: string
+        message:
+          type: string
+          description: Message to sign with wallet
+        expiresAt:
+          type: integer
+          format: int64
+
+    VerifySignatureRequest:
+      type: object
+      required:
+        - walletAddress
+        - signature
+        - nonce
+      properties:
+        walletAddress:
+          type: string
+        signature:
+          type: string
+        nonce:
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    UserInfo:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        walletAddress:
+          type: string
+        role:
+          type: string
+          enum: [CREATOR, PROJECT, ADMIN, VALIDATOR]
+        displayName:
+          type: string
+        profileComplete:
+          type: boolean
+        subscriptionTier:
+          type: string
+          enum: [FREE, PRO, ENTERPRISE]
+
+    RegistrationRequest:
+      type: object
+      required:
+        - walletAddress
+        - signature
+        - nonce
+        - role
+        - termsAccepted
+      properties:
+        walletAddress:
+          type: string
+        signature:
+          type: string
+        nonce:
+          type: string
+        role:
+          type: string
+          enum: [CREATOR, PROJECT, VALIDATOR]
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        termsAccepted:
+          type: boolean
+
+    RegistrationResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        walletAddress:
+          type: string
+        role:
+          type: string
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+        profileComplete:
+          type: boolean
+        nextSteps:
+          type: array
+          items:
+            type: string
+
+    CreatorProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        walletAddress:
+          type: string
+        displayName:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        bio:
+          type: string
+        categories:
+          type: array
+          items:
+            type: string
+        socialLinks:
+          $ref: '#/components/schemas/SocialLinks'
+        verifiedAccounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerifiedAccount'
+        reputation:
+          $ref: '#/components/schemas/ReputationInfo'
+        cvpiScore:
+          type: number
+          format: decimal
+        subscriptionTier:
+          type: string
+        profileComplete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    SocialLinks:
+      type: object
+      properties:
+        twitter:
+          type: string
+        youtube:
+          type: string
+        instagram:
+          type: string
+        tiktok:
+          type: string
+        discord:
+          type: string
+
+    VerifiedAccount:
+      type: object
+      properties:
+        platform:
+          type: string
+        handle:
+          type: string
+        followers:
+          type: integer
+        verified:
+          type: boolean
+        verifiedAt:
+          type: string
+          format: date-time
+
+    ReputationInfo:
+      type: object
+      properties:
+        score:
+          type: number
+        tier:
+          type: string
+          enum: [BRONZE, SILVER, GOLD, PLATINUM, DIAMOND]
+        totalReviews:
+          type: integer
+        averageRating:
+          type: number
+
+    Campaign:
+      type: object
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+          enum: [DRAFT, PENDING_ESCROW, ACTIVE, IN_PROGRESS, COMPLETED, CANCELLED, SUSPENDED]
+        budgetAmount:
+          type: number
+          format: decimal
+        budgetToken:
+          type: string
+        kpiTargets:
+          type: object
+        requiredReputation:
+          type: integer
+        numberOfCreators:
+          type: integer
+        complexity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+        deadline:
+          type: string
+          format: date-time
+        contractAddress:
+          type: string
+        chainId:
+          type: string
+        escrowBalance:
+          type: number
+        serviceFee:
+          type: number
+        oracleFee:
+          type: number
+        totalFee:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CampaignCreateRequest:
+      type: object
+      required:
+        - title
+        - description
+        - category
+        - budgetAmount
+        - budgetToken
+        - deadline
+        - numberOfCreators
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        category:
+          type: string
+        kpiTargets:
+          type: object
+        budgetAmount:
+          type: number
+          format: decimal
+        budgetToken:
+          type: string
+          enum: [USDC, USDT, ETH, AW3]
+        deadline:
+          type: string
+          format: date-time
+        requiredReputation:
+          type: integer
+          minimum: 0
+          maximum: 100
+        numberOfCreators:
+          type: integer
+          minimum: 1
+        complexity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+        feeEstimateId:
+          type: string
+          format: uuid
+        aw3TokenPaymentEnabled:
+          type: boolean
+        campaignMetadata:
+          type: object
+
+    Application:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignTitle:
+          type: string
+        creatorId:
+          type: string
+          format: uuid
+        proposedRate:
+          type: number
+        proposal:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, REJECTED, WITHDRAWN]
+        portfolioLinks:
+          type: array
+          items:
+            type: string
+        relevantExperience:
+          type: string
+        estimatedCompletionDays:
+          type: integer
+        matchScore:
+          type: number
+        appliedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+        rejectionReason:
+          type: string
+
+    ApplicationRequest:
+      type: object
+      required:
+        - campaignId
+        - proposal
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        proposedRate:
+          type: number
+        proposal:
+          type: string
+          maxLength: 2000
+        portfolioLinks:
+          type: array
+          items:
+            type: string
+            format: uri
+        relevantExperience:
+          type: string
+        estimatedCompletionDays:
+          type: integer
+
+    Deliverable:
+      type: object
+      properties:
+        deliverableId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        creatorId:
+          type: string
+          format: uuid
+        contentUrl:
+          type: string
+          format: uri
+        contentType:
+          type: string
+          enum: [TWEET, VIDEO, ARTICLE, INSTAGRAM_POST, TIKTOK, YOUTUBE]
+        platform:
+          type: string
+        status:
+          type: string
+          enum: [SUBMITTED, PENDING_VERIFICATION, VERIFIED, REJECTED, PAID]
+        metrics:
+          $ref: '#/components/schemas/DeliverableMetrics'
+        cvpiScore:
+          type: number
+        paymentAmount:
+          type: number
+        submittedAt:
+          type: string
+          format: date-time
+        verifiedAt:
+          type: string
+          format: date-time
+
+    DeliverableMetrics:
+      type: object
+      properties:
+        views:
+          type: integer
+        likes:
+          type: integer
+        comments:
+          type: integer
+        shares:
+          type: integer
+        clicks:
+          type: integer
+        conversions:
+          type: integer
+        engagementRate:
+          type: number
+
+    DeliverableRequest:
+      type: object
+      required:
+        - campaignId
+        - contentUrl
+        - contentType
+        - platform
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        contentUrl:
+          type: string
+          format: uri
+        contentType:
+          type: string
+          enum: [TWEET, VIDEO, ARTICLE, INSTAGRAM_POST, TIKTOK, YOUTUBE]
+        platform:
+          type: string
+        description:
+          type: string
+
+    FeeEstimateRequest:
+      type: object
+      required:
+        - campaignBudget
+        - paymentToken
+        - complexity
+        - numberOfCreators
+      properties:
+        campaignBudget:
+          type: number
+          format: decimal
+        paymentToken:
+          type: string
+          enum: [USDC, USDT, ETH, AW3]
+        complexity:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+        numberOfCreators:
+          type: integer
+        useAW3Token:
+          type: boolean
+          description: Whether to pay fees with AW3 token for discount
+
+    FeeEstimateResponse:
+      type: object
+      properties:
+        estimateId:
+          type: string
+          format: uuid
+        campaignBudget:
+          type: number
+        serviceFee:
+          type: number
+        oracleFee:
+          type: number
+        totalFee:
+          type: number
+        discount:
+          type: number
+          description: Discount percentage if using AW3 token
+        totalRequired:
+          type: number
+          description: Total amount needed (budget + fees)
+        validUntil:
+          type: string
+          format: date-time
+          description: Estimate valid for 15 minutes
+
+    CVPIScore:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        overallScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        components:
+          type: object
+          properties:
+            engagement:
+              type: number
+            reach:
+              type: number
+            conversion:
+              type: number
+            consistency:
+              type: number
+            quality:
+              type: number
+        trend:
+          type: string
+          enum: [UP, DOWN, STABLE]
+        percentile:
+          type: integer
+        lastUpdated:
+          type: string
+          format: date-time
+
+    PlatformStats:
+      type: object
+      properties:
+        totalCreators:
+          type: integer
+        totalProjects:
+          type: integer
+        totalCampaigns:
+          type: integer
+        activeCampaigns:
+          type: integer
+        totalValueProcessed:
+          type: number
+        averageCVPI:
+          type: number
+        topCategories:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              campaigns:
+                type: integer
+              creators:
+                type: integer
+        lastUpdated:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+        totalPages:
+          type: integer
+        totalElements:
+          type: integer
+        pageSize:
+          type: integer
+
+paths:
+  # ============ AUTH ENDPOINTS ============
+  /auth/wallet-connect:
+    post:
+      tags: [Auth]
+      summary: Initiate wallet connection
+      description: Generate nonce for wallet signature
+      operationId: walletConnect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletConnectRequest'
+      responses:
+        '200':
+          description: Nonce generated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WalletConnectResponse'
+
+  /auth/verify-signature:
+    post:
+      tags: [Auth]
+      summary: Verify wallet signature
+      description: Verify signature and issue JWT tokens
+      operationId: verifySignature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifySignatureRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AuthResponse'
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register new user
+      description: Register with role selection after wallet verification
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrationRequest'
+      responses:
+        '200':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RegistrationResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh JWT token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                          refreshToken:
+                            type: string
+                          expiresIn:
+                            type: integer
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+
+  /auth/nonce/{walletAddress}:
+    get:
+      tags: [Auth]
+      summary: Get nonce for wallet
+      operationId: getNonce
+      parameters:
+        - name: walletAddress
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Nonce retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WalletConnectResponse'
+
+  # ============ CREATOR PROFILE ENDPOINTS ============
+  /creator/profile/me:
+    get:
+      tags: [Creator Profile]
+      summary: Get creator profile
+      operationId: getCreatorProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreatorProfile'
+    put:
+      tags: [Creator Profile]
+      summary: Update creator profile
+      operationId: updateCreatorProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                avatar:
+                  type: string
+                bio:
+                  type: string
+                categories:
+                  type: array
+                  items:
+                    type: string
+                socialLinks:
+                  $ref: '#/components/schemas/SocialLinks'
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreatorProfile'
+
+  /creator/profile/social-verification:
+    post:
+      tags: [Creator Profile]
+      summary: Verify social media account
+      operationId: verifySocialAccount
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - platform
+                - handle
+              properties:
+                platform:
+                  type: string
+                  enum: [TWITTER, YOUTUBE, INSTAGRAM, TIKTOK, DISCORD]
+                handle:
+                  type: string
+                verificationCode:
+                  type: string
+      responses:
+        '200':
+          description: Verification initiated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          platform:
+                            type: string
+                          handle:
+                            type: string
+                          status:
+                            type: string
+                          verificationUrl:
+                            type: string
+
+  # ============ CREATOR CAMPAIGNS ENDPOINTS ============
+  /creator/campaigns:
+    get:
+      tags: [Creator Campaigns]
+      summary: Browse active campaigns
+      operationId: browseCreatorCampaigns
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minBudget
+          in: query
+          schema:
+            type: number
+        - name: maxBudget
+          in: query
+          schema:
+            type: number
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Campaigns list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          campaigns:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Campaign'
+                          pagination:
+                            $ref: '#/components/schemas/Pagination'
+
+  /creator/campaigns/{id}:
+    get:
+      tags: [Creator Campaigns]
+      summary: Get campaign details
+      operationId: getCreatorCampaignDetails
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Campaign'
+
+  /creator/campaigns/recommended:
+    get:
+      tags: [Creator Campaigns]
+      summary: Get AI-matched campaigns
+      operationId: getRecommendedCampaigns
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recommended campaigns
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          campaigns:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Campaign'
+
+  # ============ CREATOR APPLICATIONS ENDPOINTS ============
+  /creator/applications:
+    get:
+      tags: [Creator Applications]
+      summary: List own applications
+      operationId: listCreatorApplications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Applications list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Application'
+    post:
+      tags: [Creator Applications]
+      summary: Submit application
+      operationId: submitApplication
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationRequest'
+      responses:
+        '200':
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Application'
+
+  /creator/applications/{id}:
+    get:
+      tags: [Creator Applications]
+      summary: Get application details
+      operationId: getCreatorApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Application details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Application'
+    put:
+      tags: [Creator Applications]
+      summary: Update application
+      operationId: updateCreatorApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationRequest'
+      responses:
+        '200':
+          description: Application updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Application'
+
+  # ============ CREATOR DELIVERABLES ENDPOINTS ============
+  /creator/deliverables:
+    get:
+      tags: [Creator Deliverables]
+      summary: List deliverables
+      operationId: listCreatorDeliverables
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deliverables list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          deliverables:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Deliverable'
+    post:
+      tags: [Creator Deliverables]
+      summary: Submit deliverable
+      operationId: submitDeliverable
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliverableRequest'
+      responses:
+        '200':
+          description: Deliverable submitted
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Deliverable'
+
+  /creator/deliverables/{id}:
+    get:
+      tags: [Creator Deliverables]
+      summary: Get deliverable details
+      operationId: getCreatorDeliverable
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deliverable details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Deliverable'
+
+  # ============ CREATOR CVPI ENDPOINTS ============
+  /creator/cvpi/score:
+    get:
+      tags: [Creator CVPI]
+      summary: Get CVPI score
+      operationId: getCreatorCVPI
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: CVPI score
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CVPIScore'
+
+  /creator/cvpi/history:
+    get:
+      tags: [Creator CVPI]
+      summary: Get CVPI history
+      operationId: getCreatorCVPIHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+      responses:
+        '200':
+          description: CVPI history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          history:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                date:
+                                  type: string
+                                  format: date
+                                score:
+                                  type: number
+
+  # ============ CREATOR EARNINGS ENDPOINTS ============
+  /creator/earnings:
+    get:
+      tags: [Creator Earnings]
+      summary: Get earnings summary
+      operationId: getCreatorEarnings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Earnings summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalEarned:
+                            type: number
+                          pendingPayments:
+                            type: number
+                          availableBalance:
+                            type: number
+                          currency:
+                            type: string
+
+  /creator/earnings/history:
+    get:
+      tags: [Creator Earnings]
+      summary: Get earnings history
+      operationId: getCreatorEarningsHistory
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Earnings history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          transactions:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                campaignId:
+                                  type: string
+                                amount:
+                                  type: number
+                                type:
+                                  type: string
+                                status:
+                                  type: string
+                                timestamp:
+                                  type: string
+                                  format: date-time
+
+  # ============ PROJECT PROFILE ENDPOINTS ============
+  /project/profile/me:
+    get:
+      tags: [Project Profile]
+      summary: Get project profile
+      operationId: getProjectProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profile retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          userId:
+                            type: string
+                            format: uuid
+                          projectName:
+                            type: string
+                          logo:
+                            type: string
+                          website:
+                            type: string
+                          bio:
+                            type: string
+                          category:
+                            type: string
+                          verified:
+                            type: boolean
+                          socialLinks:
+                            $ref: '#/components/schemas/SocialLinks'
+    put:
+      tags: [Project Profile]
+      summary: Update project profile
+      operationId: updateProjectProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectName:
+                  type: string
+                logo:
+                  type: string
+                website:
+                  type: string
+                bio:
+                  type: string
+                category:
+                  type: string
+                socialLinks:
+                  $ref: '#/components/schemas/SocialLinks'
+      responses:
+        '200':
+          description: Profile updated
+
+  # ============ PROJECT CAMPAIGNS ENDPOINTS ============
+  /project/campaigns:
+    get:
+      tags: [Project Campaigns]
+      summary: List project campaigns
+      operationId: listProjectCampaigns
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaigns list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Campaign'
+    post:
+      tags: [Project Campaigns]
+      summary: Create campaign
+      operationId: createCampaign
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignCreateRequest'
+      responses:
+        '200':
+          description: Campaign created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Campaign'
+
+  /project/campaigns/{id}:
+    get:
+      tags: [Project Campaigns]
+      summary: Get campaign details
+      operationId: getProjectCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Campaign'
+    put:
+      tags: [Project Campaigns]
+      summary: Update campaign
+      operationId: updateCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignCreateRequest'
+      responses:
+        '200':
+          description: Campaign updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Campaign'
+    delete:
+      tags: [Project Campaigns]
+      summary: Cancel campaign
+      operationId: cancelCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign cancelled
+
+  # ============ PROJECT FINANCE ENDPOINTS ============
+  /project/finance/estimate-fees:
+    post:
+      tags: [Project Finance]
+      summary: Estimate campaign fees
+      operationId: estimateFees
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeeEstimateRequest'
+      responses:
+        '200':
+          description: Fee estimate
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FeeEstimateResponse'
+
+  # ============ PROJECT APPLICATIONS ENDPOINTS ============
+  /project/applications:
+    get:
+      tags: [Project Applications]
+      summary: List campaign applications
+      operationId: listProjectApplications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Applications list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Application'
+
+  /project/applications/{id}/accept:
+    put:
+      tags: [Project Applications]
+      summary: Accept application
+      operationId: acceptApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Application accepted
+
+  /project/applications/{id}/reject:
+    put:
+      tags: [Project Applications]
+      summary: Reject application
+      operationId: rejectApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Application rejected
+
+  # ============ PUBLIC MARKETPLACE ENDPOINTS ============
+  /public/marketplace/campaigns:
+    get:
+      tags: [Public Marketplace]
+      summary: Browse public campaigns
+      operationId: getPublicCampaigns
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: minBudget
+          in: query
+          schema:
+            type: number
+        - name: maxBudget
+          in: query
+          schema:
+            type: number
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Public campaigns
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          campaigns:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Campaign'
+                          total:
+                            type: integer
+                          page:
+                            type: integer
+                          size:
+                            type: integer
+
+  /public/marketplace/campaigns/{id}:
+    get:
+      tags: [Public Marketplace]
+      summary: Get public campaign details
+      operationId: getPublicCampaignDetail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Campaign'
+
+  /public/marketplace/creators:
+    get:
+      tags: [Public Marketplace]
+      summary: Browse public creators
+      operationId: getPublicCreators
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minReputation
+          in: query
+          schema:
+            type: integer
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Public creators
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          creators:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/CreatorProfile'
+
+  /public/marketplace/creators/{id}:
+    get:
+      tags: [Public Marketplace]
+      summary: Get public creator profile
+      operationId: getPublicCreatorProfile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Creator profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreatorProfile'
+
+  /public/marketplace/stats:
+    get:
+      tags: [Public Marketplace]
+      summary: Get platform statistics
+      operationId: getPlatformStats
+      responses:
+        '200':
+          description: Platform stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlatformStats'
+
+  /public/marketplace/categories:
+    get:
+      tags: [Public Marketplace]
+      summary: Get available categories
+      operationId: getCategories
+      responses:
+        '200':
+          description: Categories list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          categories:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                name:
+                                  type: string
+                                description:
+                                  type: string
+                                icon:
+                                  type: string
+
+  # ============ ADMIN CAMPAIGNS ENDPOINTS ============
+  /admin/campaigns:
+    get:
+      tags: [Admin Campaigns]
+      summary: List all campaigns
+      operationId: listAdminCampaigns
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: flagged
+          in: query
+          schema:
+            type: string
+        - name: projectId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaigns list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          campaigns:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Campaign'
+                          stats:
+                            type: object
+                          pagination:
+                            $ref: '#/components/schemas/Pagination'
+
+  /admin/campaigns/{id}:
+    get:
+      tags: [Admin Campaigns]
+      summary: Get campaign details
+      operationId: getAdminCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Campaign'
+
+  /admin/campaigns/{id}/suspend:
+    put:
+      tags: [Admin Campaigns]
+      summary: Suspend campaign
+      operationId: suspendCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                notifyParties:
+                  type: boolean
+                suspensionDays:
+                  type: integer
+      responses:
+        '200':
+          description: Campaign suspended
+
+  /admin/campaigns/{id}/resume:
+    put:
+      tags: [Admin Campaigns]
+      summary: Resume suspended campaign
+      operationId: resumeCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                notifyParties:
+                  type: boolean
+      responses:
+        '200':
+          description: Campaign resumed
+
+  /admin/campaigns/{id}/cancel:
+    put:
+      tags: [Admin Campaigns]
+      summary: Force cancel campaign
+      operationId: forceCancelCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+                - refundPolicy
+              properties:
+                reason:
+                  type: string
+                refundPolicy:
+                  type: string
+                  enum: [FULL_REFUND, PARTIAL_REFUND, SPLIT]
+                creatorPaymentAmount:
+                  type: number
+      responses:
+        '200':
+          description: Campaign cancelled
+
+  # ============ ADMIN USERS ENDPOINTS ============
+  /admin/users:
+    get:
+      tags: [Admin Users]
+      summary: List all users
+      operationId: listAdminUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          users:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/UserInfo'
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin Users]
+      summary: Get user details
+      operationId: getAdminUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfo'
+
+  /admin/users/{id}/suspend:
+    put:
+      tags: [Admin Users]
+      summary: Suspend user
+      operationId: suspendUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                duration:
+                  type: string
+      responses:
+        '200':
+          description: User suspended
+
+  # ============ ADMIN ANALYTICS ENDPOINTS ============
+  /admin/analytics/overview:
+    get:
+      tags: [Admin Analytics]
+      summary: Get platform analytics overview
+      operationId: getAnalyticsOverview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, 1y]
+      responses:
+        '200':
+          description: Analytics overview
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          totalUsers:
+                            type: integer
+                          newUsers:
+                            type: integer
+                          activeCampaigns:
+                            type: integer
+                          completedCampaigns:
+                            type: integer
+                          totalVolume:
+                            type: number
+                          averageCVPI:
+                            type: number
+
