@@ -2,7 +2,7 @@
 
 A comprehensive mock API for the AW3 (Allweb3) Platform with Swagger/OpenAPI documentation.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Local Development
 
@@ -24,7 +24,7 @@ Server will start at `http://localhost:3000`
 | `/swagger.json` | OpenAPI 3.0 specification (JSON) |
 | `/health` | Health check endpoint |
 
-## 📚 API Overview
+## API Overview
 
 ### Authentication (`/api/auth/*`)
 - Wallet-based authentication using DID
@@ -54,7 +54,7 @@ Server will start at `http://localhost:3000`
 - Creator & project discovery
 - Platform statistics
 
-## 🔑 Authentication
+## Authentication
 
 Most endpoints require JWT authentication. Use the Bearer token scheme:
 
@@ -68,7 +68,7 @@ To get a token:
 3. POST `/api/auth/verify-signature` with signature
 4. Use the returned `accessToken`
 
-## 🎯 Example Requests
+## Example Requests
 
 ### Get Nonce for Wallet
 ```bash
@@ -87,7 +87,7 @@ curl http://localhost:3000/api/public/marketplace/campaigns
 curl http://localhost:3000/api/public/marketplace/stats
 ```
 
-## 🚀 Deploy to Render
+## Deploy to Render
 
 1. Push this folder to a GitHub repository
 2. Go to [render.com](https://render.com)
@@ -100,7 +100,7 @@ curl http://localhost:3000/api/public/marketplace/stats
    - **Start Command**: `npm start`
 6. Deploy!
 
-## 📋 Available Mock Data
+## Available Mock Data
 
 The API includes realistic mock data for:
 - 3 sample campaigns (DeFi, NFT, GameFi)
@@ -110,14 +110,14 @@ The API includes realistic mock data for:
 - Earnings transactions
 - Platform statistics
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - Node.js + Express
 - swagger-ui-express for documentation
 - YAML.js for OpenAPI parsing
 - CORS enabled for cross-origin requests
 
-## 📄 License
+## License
 
 MIT
 

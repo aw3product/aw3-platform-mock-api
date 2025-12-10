@@ -15,13 +15,13 @@ app.use(express.json());
 // Load Swagger document
 const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
 
-// Serve Swagger UI at root
+// Serve Swagger UI
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: "AW3 Platform API Documentation"
 }));
 
-// Serve raw swagger.yaml
+// Serve raw swagger files
 app.get('/swagger.yaml', (req, res) => {
   res.sendFile(path.join(__dirname, 'swagger.yaml'));
 });
@@ -43,277 +43,241 @@ const apiError = (code, message) => ({
   timestamp: new Date().toISOString()
 });
 
-// ============ MOCK DATA ============
-const mockUsers = {
-  creator1: {
-    userId: "550e8400-e29b-41d4-a716-446655440001",
-    walletAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-    role: "CREATOR",
-    displayName: "CryptoInfluencer",
-    profileComplete: true,
-    subscriptionTier: "PRO"
+// Enum mappings
+const ENUMS = {
+  UserRole: {
+    1: 'Creator',
+    2: 'Projector',
+    3: 'Admin',
+    4: 'Validator'
   },
-  project1: {
-    userId: "550e8400-e29b-41d4-a716-446655440002",
-    walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
-    role: "PROJECT",
-    displayName: "DeFi Protocol",
-    profileComplete: true,
-    subscriptionTier: "ENTERPRISE"
+  WalletType: {
+    1: 'MetaMask',
+    2: 'WalletConnect',
+    3: 'Coinbase',
+    4: 'Rainbow'
+  },
+  SocialPlatform: {
+    1: 'Twitter',
+    2: 'YouTube',
+    3: 'Instagram',
+    4: 'TikTok',
+    5: 'Discord'
+  },
+  FocusArea: {
+    1: 'DeFi',
+    2: 'NFT',
+    3: 'Gaming',
+    4: 'Infrastructure',
+    5: 'L2',
+    6: 'DAO',
+    7: 'Metaverse',
+    8: 'Trading',
+    9: 'Other'
+  },
+  CampaignStatus: {
+    1: 'DRAFT',
+    2: 'PENDING_ESCROW',
+    3: 'ACTIVE',
+    4: 'IN_PROGRESS',
+    5: 'COMPLETED',
+    6: 'CANCELLED',
+    7: 'SUSPENDED'
+  },
+  ApplicationStatus: {
+    1: 'PENDING',
+    2: 'ACCEPTED',
+    3: 'REJECTED',
+    4: 'WITHDRAWN'
+  },
+  DeliverableStatus: {
+    1: 'SUBMITTED',
+    2: 'PENDING_VERIFICATION',
+    3: 'VERIFIED',
+    4: 'REJECTED',
+    5: 'PAID'
+  },
+  DeliverableType: {
+    1: 'Twitter Posts',
+    2: 'Videos',
+    3: 'Articles',
+    4: 'AMAs',
+    5: 'Discord Management',
+    6: 'Community Growth',
+    7: 'Instagram Post',
+    8: 'TikTok'
+  },
+  CampaignDuration: {
+    1: 'Less Than 1 Week',
+    2: '1-2 Weeks',
+    3: '2-4 Weeks',
+    4: '1-3 Months',
+    5: '3+ Months'
+  },
+  Complexity: {
+    1: 'LOW',
+    2: 'MEDIUM',
+    3: 'HIGH'
+  },
+  PaymentToken: {
+    1: 'USDC',
+    2: 'USDT',
+    3: 'ETH',
+    4: 'AW3'
+  },
+  TimePeriod: {
+    1: '7d',
+    2: '30d',
+    3: '90d',
+    4: '1y'
+  },
+  EarningsRange: {
+    1: 'Hourly',
+    2: 'Daily',
+    3: 'Monthly'
   }
 };
 
-const mockCampaigns = [
-  {
-    campaignId: "660e8400-e29b-41d4-a716-446655440001",
-    projectId: "550e8400-e29b-41d4-a716-446655440002",
-    title: "DeFi Protocol Launch Campaign",
-    description: "Promote our new DeFi protocol launch across social media platforms. Looking for crypto-native creators with strong engagement.",
-    category: "DeFi",
-    status: "ACTIVE",
-    budgetAmount: 5000,
-    budgetToken: "USDC",
-    kpiTargets: { views: 100000, engagement: 5000, clicks: 1000 },
-    requiredReputation: 50,
-    numberOfCreators: 5,
-    complexity: "MEDIUM",
-    deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-    contractAddress: "0xabc123...",
-    chainId: "1",
-    escrowBalance: 5500,
-    serviceFee: 250,
-    oracleFee: 50,
-    totalFee: 300,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    campaignId: "660e8400-e29b-41d4-a716-446655440002",
-    projectId: "550e8400-e29b-41d4-a716-446655440002",
-    title: "NFT Collection Awareness",
-    description: "Create buzz for our upcoming NFT collection. Need creative video content and Twitter threads.",
-    category: "NFT",
-    status: "ACTIVE",
-    budgetAmount: 10000,
-    budgetToken: "ETH",
-    kpiTargets: { views: 250000, engagement: 15000, mints: 500 },
-    requiredReputation: 70,
-    numberOfCreators: 3,
-    complexity: "HIGH",
-    deadline: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
-    contractAddress: "0xdef456...",
-    chainId: "1",
-    escrowBalance: 11000,
-    serviceFee: 500,
-    oracleFee: 100,
-    totalFee: 600,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    campaignId: "660e8400-e29b-41d4-a716-446655440003",
-    projectId: "550e8400-e29b-41d4-a716-446655440002",
-    title: "GameFi Beta Launch",
-    description: "Announce and promote our play-to-earn game beta. Need gaming content creators.",
-    category: "GameFi",
-    status: "ACTIVE",
-    budgetAmount: 8000,
-    budgetToken: "USDT",
-    kpiTargets: { views: 200000, signups: 5000, retention: 0.3 },
-    requiredReputation: 40,
-    numberOfCreators: 10,
-    complexity: "LOW",
-    deadline: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
-    contractAddress: "0x789ghi...",
-    chainId: "137",
-    escrowBalance: 8800,
-    serviceFee: 400,
-    oracleFee: 80,
-    totalFee: 480,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+// Match rate calculation helper
+const calculateMatchRate = (creator, campaign) => {
+  if (!creator || !campaign || !campaign.requiredReputation || !campaign.kpiTargets) {
+    return null;
   }
-];
-
-const mockCreatorProfile = {
-  userId: "550e8400-e29b-41d4-a716-446655440001",
-  walletAddress: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
-  displayName: "CryptoInfluencer",
-  avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=crypto",
-  bio: "Web3 content creator specializing in DeFi and NFT education. 5+ years in crypto space.",
-  categories: ["DeFi", "NFT", "Education"],
-  socialLinks: {
-    twitter: "https://twitter.com/cryptoinfluencer",
-    youtube: "https://youtube.com/@cryptoinfluencer",
-    instagram: null,
-    tiktok: "https://tiktok.com/@cryptoinfluencer",
-    discord: "CryptoInfluencer#1234"
-  },
-  verifiedAccounts: [
-    { platform: "TWITTER", handle: "@cryptoinfluencer", followers: 125000, verified: true, verifiedAt: "2024-01-15T10:00:00Z" },
-    { platform: "YOUTUBE", handle: "CryptoInfluencer", followers: 85000, verified: true, verifiedAt: "2024-01-20T10:00:00Z" }
-  ],
-  reputation: {
-    score: 87.5,
-    tier: "GOLD",
-    totalReviews: 42,
-    averageRating: 4.7
-  },
-  cvpiScore: 82.3,
-  subscriptionTier: "PRO",
-  profileComplete: true,
-  createdAt: "2023-06-15T08:30:00Z"
+  
+  const reputationMatch = creator.reputation >= campaign.requiredReputation ? 1 : 0.5;
+  const focusAreaMatch = creator.focusArea?.some(fa => campaign.focusArea === fa) ? 1 : 0.6;
+  
+  const matchRate = (reputationMatch * 0.6 + focusAreaMatch * 0.4) * 100;
+  return Math.round(matchRate * 10) / 10;
 };
 
-const mockApplications = [
-  {
-    applicationId: "770e8400-e29b-41d4-a716-446655440001",
-    campaignId: "660e8400-e29b-41d4-a716-446655440001",
-    campaignTitle: "DeFi Protocol Launch Campaign",
-    creatorId: "550e8400-e29b-41d4-a716-446655440001",
-    proposedRate: 800,
-    proposal: "I will create a comprehensive Twitter thread series explaining your protocol's unique features, followed by educational YouTube video content.",
-    status: "ACCEPTED",
-    portfolioLinks: ["https://twitter.com/cryptoinfluencer/thread1", "https://youtube.com/watch?v=abc123"],
-    relevantExperience: "Previously promoted 10+ DeFi protocols with average 50K+ views",
-    estimatedCompletionDays: 14,
-    matchScore: 92.5,
-    appliedAt: "2024-11-15T10:00:00Z",
-    reviewedAt: "2024-11-16T14:30:00Z"
-  },
-  {
-    applicationId: "770e8400-e29b-41d4-a716-446655440002",
-    campaignId: "660e8400-e29b-41d4-a716-446655440002",
-    campaignTitle: "NFT Collection Awareness",
-    creatorId: "550e8400-e29b-41d4-a716-446655440001",
-    proposedRate: 2000,
-    proposal: "I propose creating viral TikTok content showcasing your NFT artwork with trending sounds and effects.",
-    status: "PENDING",
-    portfolioLinks: ["https://tiktok.com/@cryptoinfluencer/video1"],
-    relevantExperience: "NFT collection promotions with 100K+ combined views",
-    estimatedCompletionDays: 21,
-    matchScore: 85.0,
-    appliedAt: "2024-11-20T09:00:00Z",
-    reviewedAt: null
-  }
-];
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'AW3 Platform Mock API',
+    version: '1.0.0',
+    documentation: '/docs',
+    endpoints: {
+      swagger: {
+        yaml: '/swagger.yaml',
+        json: '/swagger.json',
+        ui: '/docs'
+      },
+      health: '/health'
+    }
+  });
+});
 
-const mockDeliverables = [
-  {
-    deliverableId: "880e8400-e29b-41d4-a716-446655440001",
-    campaignId: "660e8400-e29b-41d4-a716-446655440001",
-    creatorId: "550e8400-e29b-41d4-a716-446655440001",
-    contentUrl: "https://twitter.com/cryptoinfluencer/status/1234567890",
-    contentType: "TWEET",
-    platform: "TWITTER",
-    status: "VERIFIED",
-    metrics: {
-      views: 45000,
-      likes: 2300,
-      comments: 180,
-      shares: 450,
-      clicks: 890,
-      conversions: 45,
-      engagementRate: 6.5
-    },
-    cvpiScore: 88.2,
-    paymentAmount: 400,
-    submittedAt: "2024-11-18T15:00:00Z",
-    verifiedAt: "2024-11-19T10:00:00Z"
-  },
-  {
-    deliverableId: "880e8400-e29b-41d4-a716-446655440002",
-    campaignId: "660e8400-e29b-41d4-a716-446655440001",
-    creatorId: "550e8400-e29b-41d4-a716-446655440001",
-    contentUrl: "https://youtube.com/watch?v=xyz789",
-    contentType: "VIDEO",
-    platform: "YOUTUBE",
-    status: "PENDING_VERIFICATION",
-    metrics: null,
-    cvpiScore: null,
-    paymentAmount: null,
-    submittedAt: "2024-11-25T12:00:00Z",
-    verifiedAt: null
-  }
-];
-
-const mockCategories = [
-  { id: "defi", name: "DeFi", description: "Decentralized Finance protocols", icon: "💰", campaignCount: 45, creatorCount: 230 },
-  { id: "nft", name: "NFT", description: "Non-Fungible Tokens & Digital Art", icon: "🎨", campaignCount: 68, creatorCount: 420 },
-  { id: "gamefi", name: "GameFi", description: "Play-to-Earn & Web3 Gaming", icon: "🎮", campaignCount: 32, creatorCount: 180 },
-  { id: "dao", name: "DAO", description: "Decentralized Autonomous Organizations", icon: "🏛️", campaignCount: 15, creatorCount: 85 },
-  { id: "infrastructure", name: "Infrastructure", description: "Layer 1/2 & Web3 Tools", icon: "⚙️", campaignCount: 28, creatorCount: 110 },
-  { id: "metaverse", name: "Metaverse", description: "Virtual Worlds & Digital Real Estate", icon: "🌐", campaignCount: 22, creatorCount: 95 }
-];
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // ============ AUTH ENDPOINTS ============
 app.post('/api/auth/wallet-connect', (req, res) => {
   const { walletAddress, chainId, walletType } = req.body;
-  const nonce = uuidv4().replace(/-/g, '').substring(0, 32);
   res.json(apiResponse({
     walletAddress,
-    nonce,
-    message: `Sign this message to authenticate with AW3 Platform:\n\nNonce: ${nonce}\nTimestamp: ${Date.now()}`,
-    expiresAt: Date.now() + 300000 // 5 minutes
+    nonce: uuidv4(),
+    message: `Welcome to AW3 Platform!\n\nSign this message to authenticate.\n\nWallet: ${walletAddress}\nChain ID: ${chainId || '1'}\nNonce: ${uuidv4()}`,
+    expiresAt: Date.now() + 300000
   }));
 });
 
 app.post('/api/auth/verify-signature', (req, res) => {
-  const { walletAddress } = req.body;
+  const { walletAddress, signature, nonce } = req.body;
   res.json(apiResponse({
-    accessToken: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_access_token_${Date.now()}`,
-    refreshToken: `refresh_${uuidv4()}`,
-    tokenType: "Bearer",
+    accessToken: 'mock_access_token_' + uuidv4(),
+    refreshToken: 'mock_refresh_token_' + uuidv4(),
+    tokenType: 'Bearer',
     expiresIn: 3600,
-    user: mockUsers.creator1
+    user: {
+      userId: uuidv4(),
+      walletAddress,
+      role: 1,
+      displayName: 'Demo Creator',
+      profileComplete: false
+    }
   }));
 });
 
 app.post('/api/auth/register', (req, res) => {
-  const { walletAddress, role, displayName } = req.body;
-  const userId = uuidv4();
+  const { walletAddress, role, termsAccepted } = req.body;
   res.json(apiResponse({
-    userId,
+    userId: uuidv4(),
     walletAddress,
     role,
-    accessToken: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_access_token_${Date.now()}`,
-    refreshToken: `refresh_${uuidv4()}`,
+    accessToken: 'mock_access_token_' + uuidv4(),
+    refreshToken: 'mock_refresh_token_' + uuidv4(),
     expiresIn: 3600,
     profileComplete: false,
-    nextSteps: ["Complete profile", "Verify social accounts", "Browse campaigns"]
+    nextSteps: ['Complete profile', 'Verify social accounts', 'Browse campaigns']
   }));
 });
 
 app.post('/api/auth/refresh', (req, res) => {
   res.json(apiResponse({
-    accessToken: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_access_token_${Date.now()}`,
-    refreshToken: `refresh_${uuidv4()}`,
+    accessToken: 'mock_access_token_' + uuidv4(),
     expiresIn: 3600
   }));
 });
 
 app.post('/api/auth/logout', (req, res) => {
-  res.json(apiResponse({ success: true, message: "Logged out successfully" }));
+  res.json(apiResponse({ message: 'Logged out successfully' }));
 });
 
 app.get('/api/auth/nonce/:walletAddress', (req, res) => {
-  const nonce = uuidv4().replace(/-/g, '').substring(0, 32);
   res.json(apiResponse({
     walletAddress: req.params.walletAddress,
-    nonce,
-    message: `Sign this message to authenticate:\n\nNonce: ${nonce}`,
-    expiresAt: Date.now() + 300000
+    nonce: uuidv4()
   }));
 });
 
 // ============ CREATOR PROFILE ENDPOINTS ============
 app.get('/api/creator/profile/me', (req, res) => {
-  res.json(apiResponse(mockCreatorProfile));
+  res.json(apiResponse({
+    userId: uuidv4(),
+    walletAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    displayName: 'CryptoCreator',
+    avatar: 'https://i.pravatar.cc/150?u=creator1',
+    bio: 'Web3 content creator specializing in DeFi and NFT projects',
+    focusArea: [1, 2, 6],
+    socialAccounts: [
+      {
+        platform: 1,
+        handle: '@cryptoinfluencer',
+        link: 'https://twitter.com/cryptoinfluencer',
+        followers: 125000,
+        verified: true,
+        verifiedAt: '2024-01-15T10:00:00Z'
+      },
+      {
+        platform: 2,
+        handle: '@cryptovideos',
+        link: 'https://youtube.com/@cryptovideos',
+        followers: 85000,
+        verified: true,
+        verifiedAt: '2024-01-20T10:00:00Z'
+      }
+    ],
+    profileComplete: true,
+    createdAt: '2024-01-10T10:00:00Z'
+  }));
 });
 
 app.put('/api/creator/profile/me', (req, res) => {
-  const updated = { ...mockCreatorProfile, ...req.body, updatedAt: new Date().toISOString() };
-  res.json(apiResponse(updated));
+  const { displayName, avatar, bio, focusArea } = req.body;
+  res.json(apiResponse({
+    userId: uuidv4(),
+    walletAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    displayName: displayName || 'CryptoCreator',
+    avatar: avatar || 'https://i.pravatar.cc/150?u=creator1',
+    bio: bio || 'Web3 content creator',
+    focusArea: focusArea || [1, 2],
+    socialAccounts: [],
+    profileComplete: true,
+    createdAt: '2024-01-10T10:00:00Z'
+  }));
 });
 
 app.post('/api/creator/profile/social-verification', (req, res) => {
@@ -321,522 +285,756 @@ app.post('/api/creator/profile/social-verification', (req, res) => {
   res.json(apiResponse({
     platform,
     handle,
-    status: "PENDING",
-    verificationUrl: `https://verification.aw3.com/verify/${platform}/${handle}`,
-    expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    verificationStatus: 'PENDING',
+    message: 'Verification initiated. Please check your social media for instructions.'
   }));
 });
 
 // ============ CREATOR CAMPAIGNS ENDPOINTS ============
 app.get('/api/creator/campaigns', (req, res) => {
-  const { category, minBudget, maxBudget, page = 0, size = 20 } = req.query;
-  let filtered = mockCampaigns.filter(c => c.status === 'ACTIVE');
-  
-  if (category) filtered = filtered.filter(c => c.category.toLowerCase() === category.toLowerCase());
-  if (minBudget) filtered = filtered.filter(c => c.budgetAmount >= parseFloat(minBudget));
-  if (maxBudget) filtered = filtered.filter(c => c.budgetAmount <= parseFloat(maxBudget));
-  
+  const mockCreatorProfile = {
+    focusArea: [1, 2],
+    reputation: 87.5
+  };
+
+  const campaigns = [
+    {
+      campaignId: uuidv4(),
+      projectId: uuidv4(),
+      title: 'DeFi Protocol Launch Campaign',
+      focusArea: 1,
+      status: 3,
+      budgetAmount: 5000,
+      budgetToken: 1,
+      numberOfApplicants: 24,
+      numberOfDeliveries: 5,
+      deadline: '2025-01-15T23:59:59Z',
+      kpiTargets: { views: 50000, engagement: 5 },
+      requiredReputation: 75,
+      matchRate: calculateMatchRate({ ...mockCreatorProfile, reputation: 87.5 }, { 
+        focusArea: 1, 
+        requiredReputation: 75, 
+        kpiTargets: {} 
+      }),
+      projectAvatar: 'https://i.pravatar.cc/150?u=project1',
+      createdAt: '2024-12-01T10:00:00Z',
+      updatedAt: '2024-12-10T10:00:00Z'
+    },
+    {
+      campaignId: uuidv4(),
+      projectId: uuidv4(),
+      title: 'NFT Collection Promotion',
+      focusArea: 2,
+      status: 3,
+      budgetAmount: 3500,
+      budgetToken: 1,
+      numberOfApplicants: 18,
+      numberOfDeliveries: 8,
+      deadline: '2025-01-20T23:59:59Z',
+      kpiTargets: { views: 30000, engagement: 4 },
+      requiredReputation: 70,
+      matchRate: calculateMatchRate({ ...mockCreatorProfile, reputation: 87.5 }, { 
+        focusArea: 2, 
+        requiredReputation: 70, 
+        kpiTargets: {} 
+      }),
+      projectAvatar: 'https://i.pravatar.cc/150?u=project2',
+      createdAt: '2024-12-02T10:00:00Z',
+      updatedAt: '2024-12-09T10:00:00Z'
+    },
+    {
+      campaignId: uuidv4(),
+      projectId: uuidv4(),
+      title: 'Gaming Platform Beta Test',
+      focusArea: 3,
+      status: 3,
+      budgetAmount: 8000,
+      budgetToken: 1,
+      numberOfApplicants: 42,
+      numberOfDeliveries: 10,
+      deadline: '2025-02-01T23:59:59Z',
+      kpiTargets: { signups: 1000, engagement: 6 },
+      requiredReputation: 80,
+      matchRate: calculateMatchRate({ ...mockCreatorProfile, reputation: 87.5 }, { 
+        focusArea: 3, 
+        requiredReputation: 80, 
+        kpiTargets: {} 
+      }),
+      projectAvatar: 'https://i.pravatar.cc/150?u=project3',
+      createdAt: '2024-12-03T10:00:00Z',
+      updatedAt: '2024-12-08T10:00:00Z'
+    }
+  ];
+
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+
   res.json(apiResponse({
-    campaigns: filtered,
+    campaigns,
     pagination: {
-      currentPage: parseInt(page),
-      totalPages: Math.ceil(filtered.length / parseInt(size)),
-      totalElements: filtered.length,
-      pageSize: parseInt(size)
+      currentPage: page,
+      totalPages: 3,
+      totalElements: 48,
+      pageSize: size
     }
   }));
 });
 
 app.get('/api/creator/campaigns/:id', (req, res) => {
-  const campaign = mockCampaigns.find(c => c.campaignId === req.params.id);
-  if (!campaign) return res.status(404).json(apiError("NOT_FOUND", "Campaign not found"));
-  res.json(apiResponse(campaign));
-});
-
-app.get('/api/creator/campaigns/recommended', (req, res) => {
   res.json(apiResponse({
-    campaigns: mockCampaigns.slice(0, 2).map(c => ({ ...c, matchScore: Math.random() * 20 + 80 })),
-    pagination: { currentPage: 0, totalPages: 1, totalElements: 2, pageSize: 10 }
+    campaignId: req.params.id,
+    projectId: uuidv4(),
+    title: 'DeFi Protocol Launch Campaign',
+    description: 'Help us launch our revolutionary DeFi protocol with engaging content that educates and attracts users.',
+    objective: 'Increase platform awareness and drive user signups through authentic creator content showcasing our unique features and benefits.',
+    focusArea: 1,
+    status: 3,
+    budgetAmount: 5000,
+    budgetToken: 1,
+    numberOfCreators: 10,
+    numberOfApplicants: 24,
+    numberOfDeliveries: 5,
+    deadline: '2025-01-15T23:59:59Z',
+    complexity: 2,
+    kpiTargets: {
+      views: 50000,
+      engagement: 5,
+      conversions: 500
+    },
+    requiredReputation: 75,
+    matchRate: 92.5,
+    projectInfo: {
+      projectId: uuidv4(),
+      projectName: 'DefiMax Protocol',
+      projectAvatar: 'https://i.pravatar.cc/150?u=project1',
+      website: 'https://defimax.io',
+      socialChannels: [
+        {
+          platform: 1,
+          handle: '@DefiMax',
+          link: 'https://twitter.com/defimax',
+          followers: 45000,
+          verified: true,
+          verifiedAt: '2024-01-01T00:00:00Z'
+        },
+        {
+          platform: 5,
+          handle: 'DefiMax Community',
+          link: 'https://discord.gg/defimax',
+          followers: 12000,
+          verified: true,
+          verifiedAt: '2024-01-01T00:00:00Z'
+        }
+      ]
+    },
+    paymentTerms: {
+      paymentMethod: 'USDC on Ethereum mainnet via smart contract escrow',
+      paymentSchedule: 'Milestone-based: 50% upon content approval, 50% after 7 days performance verification',
+      paymentConditions: 'Content must meet quality standards and achieve minimum 70% of target KPIs'
+    },
+    createdAt: '2024-12-01T10:00:00Z',
+    updatedAt: '2024-12-10T10:00:00Z'
   }));
 });
 
 // ============ CREATOR APPLICATIONS ENDPOINTS ============
 app.get('/api/creator/applications', (req, res) => {
-  res.json(apiResponse(mockApplications));
+  res.json(apiResponse([
+    {
+      applicationId: uuidv4(),
+      campaignId: uuidv4(),
+      campaignTitle: 'DeFi Protocol Launch Campaign',
+      creatorId: uuidv4(),
+      proposedRate: 500,
+      proposal: 'I have extensive experience promoting DeFi projects with proven track record...',
+      status: 1,
+      portfolioLinks: ['https://youtube.com/video1', 'https://twitter.com/post1'],
+      relevantExperience: '3 years in Web3 content creation',
+      estimatedCompletionDays: 7,
+      matchScore: 92.5,
+      appliedAt: '2024-12-08T10:00:00Z',
+      reviewedAt: null
+    },
+    {
+      applicationId: uuidv4(),
+      campaignId: uuidv4(),
+      campaignTitle: 'NFT Collection Promotion',
+      creatorId: uuidv4(),
+      proposedRate: 400,
+      proposal: 'My audience loves NFT content...',
+      status: 2,
+      portfolioLinks: ['https://youtube.com/video2'],
+      relevantExperience: '2 years NFT content',
+      estimatedCompletionDays: 5,
+      matchScore: 88.0,
+      appliedAt: '2024-12-05T10:00:00Z',
+      reviewedAt: '2024-12-07T10:00:00Z'
+    }
+  ]));
 });
 
 app.post('/api/creator/applications', (req, res) => {
-  const application = {
+  const { campaignId, proposedRate, proposal, portfolioLinks, relevantExperience, estimatedCompletionDays } = req.body;
+  res.json(apiResponse({
     applicationId: uuidv4(),
-    ...req.body,
-    creatorId: "550e8400-e29b-41d4-a716-446655440001",
-    status: "PENDING",
-    matchScore: Math.random() * 20 + 75,
+    campaignId,
+    creatorId: uuidv4(),
+    proposedRate,
+    proposal,
+    status: 1,
+    portfolioLinks,
+    relevantExperience,
+    estimatedCompletionDays,
+    matchScore: 85.0,
     appliedAt: new Date().toISOString(),
     reviewedAt: null
-  };
-  res.json(apiResponse(application));
+  }));
 });
 
 app.get('/api/creator/applications/:id', (req, res) => {
-  const application = mockApplications.find(a => a.applicationId === req.params.id);
-  if (!application) return res.status(404).json(apiError("NOT_FOUND", "Application not found"));
-  res.json(apiResponse(application));
-});
-
-app.put('/api/creator/applications/:id', (req, res) => {
-  const application = mockApplications.find(a => a.applicationId === req.params.id);
-  if (!application) return res.status(404).json(apiError("NOT_FOUND", "Application not found"));
-  const updated = { ...application, ...req.body, updatedAt: new Date().toISOString() };
-  res.json(apiResponse(updated));
+  res.json(apiResponse({
+    applicationId: req.params.id,
+    campaignId: uuidv4(),
+    campaignTitle: 'DeFi Protocol Launch Campaign',
+    creatorId: uuidv4(),
+    proposedRate: 500,
+    proposal: 'I have extensive experience promoting DeFi projects...',
+    status: 1,
+    portfolioLinks: ['https://youtube.com/video1'],
+    relevantExperience: '3 years in Web3',
+    estimatedCompletionDays: 7,
+    matchScore: 92.5,
+    appliedAt: '2024-12-08T10:00:00Z',
+    reviewedAt: null
+  }));
 });
 
 // ============ CREATOR DELIVERABLES ENDPOINTS ============
 app.get('/api/creator/deliverables', (req, res) => {
-  res.json(apiResponse({
-    deliverables: mockDeliverables,
-    pagination: { total: mockDeliverables.length, limit: 20, offset: 0, hasMore: false }
-  }));
+  res.json(apiResponse([
+    {
+      deliverableId: uuidv4(),
+      campaignId: uuidv4(),
+      creatorId: uuidv4(),
+      contentUrl: 'https://youtube.com/watch?v=abc123',
+      deliverableType: 2,
+      platform: 2,
+      status: 3,
+      metrics: {
+        views: 52000,
+        likes: 3200,
+        comments: 450,
+        shares: 280,
+        engagementRate: 7.5
+      },
+      cvpiScore: 88.5,
+      paymentAmount: 500,
+      submittedAt: '2024-12-05T10:00:00Z',
+      verifiedAt: '2024-12-07T10:00:00Z'
+    }
+  ]));
 });
 
 app.post('/api/creator/deliverables', (req, res) => {
-  const deliverable = {
+  const { campaignId, contentUrl, deliverableType, platform, description } = req.body;
+  res.json(apiResponse({
     deliverableId: uuidv4(),
-    ...req.body,
-    creatorId: "550e8400-e29b-41d4-a716-446655440001",
-    status: "SUBMITTED",
-    metrics: null,
-    cvpiScore: null,
-    paymentAmount: null,
+    campaignId,
+    creatorId: uuidv4(),
+    contentUrl,
+    deliverableType,
+    platform,
+    status: 1,
     submittedAt: new Date().toISOString(),
     verifiedAt: null
-  };
-  res.json(apiResponse(deliverable));
+  }));
 });
 
 app.get('/api/creator/deliverables/:id', (req, res) => {
-  const deliverable = mockDeliverables.find(d => d.deliverableId === req.params.id);
-  if (!deliverable) return res.status(404).json(apiError("NOT_FOUND", "Deliverable not found"));
-  res.json(apiResponse(deliverable));
+  res.json(apiResponse({
+    deliverableId: req.params.id,
+    campaignId: uuidv4(),
+    creatorId: uuidv4(),
+    contentUrl: 'https://youtube.com/watch?v=abc123',
+    deliverableType: 2,
+    platform: 2,
+    status: 3,
+    metrics: {
+      views: 52000,
+      likes: 3200,
+      comments: 450,
+      shares: 280,
+      engagementRate: 7.5
+    },
+    cvpiScore: 88.5,
+    paymentAmount: 500,
+    submittedAt: '2024-12-05T10:00:00Z',
+    verifiedAt: '2024-12-07T10:00:00Z'
+  }));
+});
+
+// ============ CREATOR EARNINGS ENDPOINTS ============
+app.get('/api/creator/earnings', (req, res) => {
+  res.json(apiResponse({
+    totalEarned: 12450.50,
+    pendingPayments: 1500.00,
+    availableBalance: 10950.50,
+    currency: 'USDC',
+    averageROI: 45.8,
+    growthRate: 12.5
+  }));
+});
+
+app.get('/api/creator/earnings/history', (req, res) => {
+  const range = parseInt(req.query.range) || 3;
+  
+  const generateData = (rangeType) => {
+    const data = [];
+    const now = new Date();
+    let points = 30;
+    
+    if (rangeType === 1) points = 24; // Hourly
+    if (rangeType === 2) points = 30; // Daily
+    if (rangeType === 3) points = 12; // Monthly
+    
+    for (let i = points; i >= 0; i--) {
+      const timestamp = new Date(now);
+      if (rangeType === 1) timestamp.setHours(now.getHours() - i);
+      if (rangeType === 2) timestamp.setDate(now.getDate() - i);
+      if (rangeType === 3) timestamp.setMonth(now.getMonth() - i);
+      
+      data.push({
+        timestamp: timestamp.toISOString(),
+        amount: Math.random() * 500 + 100,
+        transactionCount: Math.floor(Math.random() * 5) + 1
+      });
+    }
+    return data;
+  };
+
+  res.json(apiResponse({
+    data: generateData(range),
+    range,
+    totalAmount: 12450.50,
+    periodStart: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    periodEnd: new Date().toISOString()
+  }));
 });
 
 // ============ CREATOR CVPI ENDPOINTS ============
 app.get('/api/creator/cvpi/score', (req, res) => {
   res.json(apiResponse({
-    userId: "550e8400-e29b-41d4-a716-446655440001",
+    userId: uuidv4(),
     overallScore: 82.3,
     components: {
-      engagement: 85.2,
+      engagement: 85.0,
       reach: 78.5,
-      conversion: 81.0,
-      consistency: 88.1,
-      quality: 79.7
+      conversion: 88.2,
+      consistency: 80.0,
+      quality: 79.8
     },
-    trend: "UP",
+    reputation: {
+      score: 87.5,
+      tier: 'GOLD',
+      totalReviews: 42,
+      averageRating: 4.7
+    },
+    trend: 'UP',
     percentile: 87,
     lastUpdated: new Date().toISOString()
   }));
 });
 
 app.get('/api/creator/cvpi/history', (req, res) => {
-  const history = [];
-  for (let i = 30; i >= 0; i--) {
-    const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-    history.push({
-      date: date.toISOString().split('T')[0],
-      score: 75 + Math.random() * 15
-    });
-  }
-  res.json(apiResponse({ history }));
-});
+  const period = parseInt(req.query.period) || 2;
+  const limit = parseInt(req.query.limit) || 30;
+  
+  const generateHistory = (periodType, limitCount) => {
+    const history = [];
+    const now = new Date();
+    
+    let days = 7;
+    if (periodType === 2) days = 30;
+    if (periodType === 3) days = 90;
+    if (periodType === 4) days = 365;
+    
+    const interval = Math.floor(days / Math.min(limitCount, days));
+    
+    for (let i = days; i >= 0; i -= interval) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      history.push({
+        date: date.toISOString().split('T')[0],
+        score: 70 + Math.random() * 20,
+        reputation: 75 + Math.random() * 15
+      });
+    }
+    return history.slice(0, limitCount);
+  };
 
-// ============ CREATOR EARNINGS ENDPOINTS ============
-app.get('/api/creator/earnings', (req, res) => {
   res.json(apiResponse({
-    totalEarned: 12500.00,
-    pendingPayments: 2400.00,
-    availableBalance: 3200.00,
-    currency: "USDC"
+    history: generateHistory(period, limit),
+    period,
+    limit
   }));
 });
 
-app.get('/api/creator/earnings/history', (req, res) => {
+// ============ CREATOR CERTIFICATES ENDPOINTS ============
+app.get('/api/creator/certificates', (req, res) => {
   res.json(apiResponse({
-    transactions: [
-      { id: uuidv4(), campaignId: mockCampaigns[0].campaignId, amount: 400, type: "PAYMENT", status: "COMPLETED", timestamp: "2024-11-20T10:00:00Z" },
-      { id: uuidv4(), campaignId: mockCampaigns[0].campaignId, amount: 350, type: "PAYMENT", status: "COMPLETED", timestamp: "2024-11-18T14:30:00Z" },
-      { id: uuidv4(), campaignId: mockCampaigns[1].campaignId, amount: 800, type: "PAYMENT", status: "PENDING", timestamp: "2024-11-25T09:00:00Z" }
+    certificates: [
+      {
+        certificateId: uuidv4(),
+        certificateType: 'Top Performer',
+        title: 'DeFi Campaign Excellence',
+        issueDate: '2024-11-15',
+        imageUrl: 'https://via.placeholder.com/800x600/4F46E5/FFFFFF?text=Top+Performer+Certificate',
+        relatedCampaign: {
+          campaignId: uuidv4(),
+          campaignTitle: 'DeFi Protocol Launch Campaign',
+          projectName: 'DefiMax Protocol'
+        },
+        metadata: {
+          achievement: 'Exceeded KPIs by 150%',
+          rank: '1/24'
+        }
+      },
+      {
+        certificateId: uuidv4(),
+        certificateType: 'Quality Content',
+        title: 'NFT Content Creation Award',
+        issueDate: '2024-10-20',
+        imageUrl: 'https://via.placeholder.com/800x600/7C3AED/FFFFFF?text=Quality+Content+Award',
+        relatedCampaign: {
+          campaignId: uuidv4(),
+          campaignTitle: 'NFT Collection Promotion',
+          projectName: 'ArtBlock NFTs'
+        },
+        metadata: {
+          achievement: 'Outstanding content quality',
+          rating: '4.9/5.0'
+        }
+      },
+      {
+        certificateId: uuidv4(),
+        certificateType: 'High Engagement',
+        title: 'Community Builder Recognition',
+        issueDate: '2024-09-10',
+        imageUrl: 'https://via.placeholder.com/800x600/059669/FFFFFF?text=High+Engagement+Award',
+        relatedCampaign: {
+          campaignId: uuidv4(),
+          campaignTitle: 'Gaming Platform Beta Test',
+          projectName: 'MetaGame Arena'
+        },
+        metadata: {
+          achievement: '12% engagement rate',
+          followers: '+5000'
+        }
+      }
     ]
   }));
 });
 
-// ============ PROJECT PROFILE ENDPOINTS ============
-app.get('/api/project/profile/me', (req, res) => {
+// ============ CREATOR SETTINGS ENDPOINTS ============
+app.get('/api/creator/settings/language', (req, res) => {
   res.json(apiResponse({
-    userId: "550e8400-e29b-41d4-a716-446655440002",
-    projectName: "DeFi Protocol",
-    logo: "https://api.dicebear.com/7.x/shapes/svg?seed=defi",
-    website: "https://defiprotocol.io",
-    bio: "Next-generation DeFi protocol with innovative yield strategies",
-    category: "DeFi",
-    verified: true,
-    socialLinks: {
-      twitter: "https://twitter.com/defiprotocol",
-      discord: "https://discord.gg/defiprotocol"
-    }
+    language: 'en',
+    timezone: 'UTC'
   }));
 });
 
-app.put('/api/project/profile/me', (req, res) => {
-  res.json(apiResponse({ ...req.body, updatedAt: new Date().toISOString() }));
-});
-
-// ============ PROJECT CAMPAIGNS ENDPOINTS ============
-app.get('/api/project/campaigns', (req, res) => {
-  res.json(apiResponse(mockCampaigns));
-});
-
-app.post('/api/project/campaigns', (req, res) => {
-  const campaign = {
-    campaignId: uuidv4(),
-    projectId: "550e8400-e29b-41d4-a716-446655440002",
-    ...req.body,
-    status: "DRAFT",
-    escrowBalance: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-  res.json(apiResponse(campaign));
-});
-
-app.get('/api/project/campaigns/:id', (req, res) => {
-  const campaign = mockCampaigns.find(c => c.campaignId === req.params.id);
-  if (!campaign) return res.status(404).json(apiError("NOT_FOUND", "Campaign not found"));
+app.post('/api/creator/settings/language', (req, res) => {
   res.json(apiResponse({
-    ...campaign,
-    statistics: {
-      totalApplications: 12,
-      acceptedApplications: 3,
-      pendingApplications: 5,
-      totalDeliverables: 8,
-      completedDeliverables: 4
-    }
+    language: req.body.language || 'en',
+    timezone: req.body.timezone || 'UTC'
   }));
 });
 
-app.put('/api/project/campaigns/:id', (req, res) => {
-  const campaign = mockCampaigns.find(c => c.campaignId === req.params.id);
-  if (!campaign) return res.status(404).json(apiError("NOT_FOUND", "Campaign not found"));
-  res.json(apiResponse({ ...campaign, ...req.body, updatedAt: new Date().toISOString() }));
-});
-
-app.delete('/api/project/campaigns/:id', (req, res) => {
-  res.json(apiResponse({ campaignId: req.params.id, status: "CANCELLED" }));
-});
-
-// ============ PROJECT FINANCE ENDPOINTS ============
-app.post('/api/project/finance/estimate-fees', (req, res) => {
-  const { campaignBudget, paymentToken, complexity, numberOfCreators, useAW3Token } = req.body;
-  const serviceFeeRate = useAW3Token ? 0.04 : 0.05; // 4% with AW3, 5% without
-  const oracleFeeRate = 0.01;
-  
-  const serviceFee = campaignBudget * serviceFeeRate;
-  const oracleFee = campaignBudget * oracleFeeRate;
-  const totalFee = serviceFee + oracleFee;
-  const discount = useAW3Token ? 20 : 0;
-  
+app.get('/api/creator/settings/rate', (req, res) => {
   res.json(apiResponse({
-    estimateId: uuidv4(),
-    campaignBudget,
-    serviceFee,
-    oracleFee,
-    totalFee,
-    discount,
-    totalRequired: campaignBudget + totalFee,
-    validUntil: new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    hourlyRate: 100,
+    dailyRate: 800,
+    projectRate: 5000,
+    currency: 'USDC',
+    minimumBudget: 500
   }));
 });
 
-// ============ PROJECT APPLICATIONS ENDPOINTS ============
-app.get('/api/project/applications', (req, res) => {
-  res.json(apiResponse(mockApplications.map(a => ({
-    ...a,
-    creatorName: "CryptoInfluencer",
-    creatorAvatar: "https://api.dicebear.com/7.x/identicon/svg?seed=crypto",
-    creatorReputation: 87.5
-  }))));
-});
-
-app.put('/api/project/applications/:id/accept', (req, res) => {
+app.post('/api/creator/settings/rate', (req, res) => {
   res.json(apiResponse({
-    applicationId: req.params.id,
-    status: "ACCEPTED",
-    acceptedAt: new Date().toISOString()
+    hourlyRate: req.body.hourlyRate || 100,
+    dailyRate: req.body.dailyRate || 800,
+    projectRate: req.body.projectRate || 5000,
+    currency: req.body.currency || 'USDC',
+    minimumBudget: req.body.minimumBudget || 500
   }));
 });
 
-app.put('/api/project/applications/:id/reject', (req, res) => {
+app.get('/api/creator/settings/notification', (req, res) => {
   res.json(apiResponse({
-    applicationId: req.params.id,
-    status: "REJECTED",
-    rejectedAt: new Date().toISOString(),
-    reason: req.body.reason
+    emailNotifications: true,
+    pushNotifications: true,
+    campaignUpdates: true,
+    applicationUpdates: true,
+    paymentNotifications: true,
+    marketingEmails: false
+  }));
+});
+
+app.post('/api/creator/settings/notification', (req, res) => {
+  res.json(apiResponse({
+    emailNotifications: req.body.emailNotifications !== undefined ? req.body.emailNotifications : true,
+    pushNotifications: req.body.pushNotifications !== undefined ? req.body.pushNotifications : true,
+    campaignUpdates: req.body.campaignUpdates !== undefined ? req.body.campaignUpdates : true,
+    applicationUpdates: req.body.applicationUpdates !== undefined ? req.body.applicationUpdates : true,
+    paymentNotifications: req.body.paymentNotifications !== undefined ? req.body.paymentNotifications : true,
+    marketingEmails: req.body.marketingEmails !== undefined ? req.body.marketingEmails : false
+  }));
+});
+
+app.get('/api/creator/settings/privacy', (req, res) => {
+  res.json(apiResponse({
+    profileVisibility: 'PUBLIC',
+    showEarnings: false,
+    showCompletedCampaigns: true,
+    showSocialAccounts: true
+  }));
+});
+
+app.post('/api/creator/settings/privacy', (req, res) => {
+  res.json(apiResponse({
+    profileVisibility: req.body.profileVisibility || 'PUBLIC',
+    showEarnings: req.body.showEarnings !== undefined ? req.body.showEarnings : false,
+    showCompletedCampaigns: req.body.showCompletedCampaigns !== undefined ? req.body.showCompletedCampaigns : true,
+    showSocialAccounts: req.body.showSocialAccounts !== undefined ? req.body.showSocialAccounts : true
+  }));
+});
+
+app.get('/api/creator/settings/security', (req, res) => {
+  res.json(apiResponse({
+    twoFactorEnabled: false,
+    loginAlerts: true,
+    trustedDevices: [
+      {
+        deviceId: uuidv4(),
+        deviceName: 'Chrome on Windows',
+        lastUsed: '2024-12-10T09:30:00Z'
+      }
+    ]
+  }));
+});
+
+app.post('/api/creator/settings/security', (req, res) => {
+  res.json(apiResponse({
+    twoFactorEnabled: req.body.twoFactorEnabled !== undefined ? req.body.twoFactorEnabled : false,
+    loginAlerts: req.body.loginAlerts !== undefined ? req.body.loginAlerts : true,
+    trustedDevices: req.body.trustedDevices || []
+  }));
+});
+
+// ============ DASHBOARD ENDPOINTS ============
+app.get('/api/dashboard/trending', (req, res) => {
+  res.json(apiResponse({
+    campaigns: [
+      {
+        campaignId: uuidv4(),
+        projectId: uuidv4(),
+        title: 'Viral DeFi Launch',
+        focusArea: 1,
+        status: 3,
+        budgetAmount: 10000,
+        budgetToken: 1,
+        numberOfApplicants: 67,
+        numberOfDeliveries: 15,
+        deadline: '2025-01-25T23:59:59Z',
+        kpiTargets: {},
+        requiredReputation: 85,
+        matchRate: 95.0,
+        projectAvatar: 'https://i.pravatar.cc/150?u=trending1',
+        createdAt: '2024-12-08T10:00:00Z',
+        updatedAt: '2024-12-10T10:00:00Z'
+      },
+      {
+        campaignId: uuidv4(),
+        projectId: uuidv4(),
+        title: 'Trending NFT Drop',
+        focusArea: 2,
+        status: 3,
+        budgetAmount: 7500,
+        budgetToken: 1,
+        numberOfApplicants: 52,
+        numberOfDeliveries: 12,
+        deadline: '2025-01-18T23:59:59Z',
+        kpiTargets: {},
+        requiredReputation: 80,
+        matchRate: 88.5,
+        projectAvatar: 'https://i.pravatar.cc/150?u=trending2',
+        createdAt: '2024-12-09T10:00:00Z',
+        updatedAt: '2024-12-10T10:00:00Z'
+      }
+    ],
+    period: '24h'
+  }));
+});
+
+app.get('/api/dashboard/live', (req, res) => {
+  res.json(apiResponse({
+    campaigns: [
+      {
+        campaignId: uuidv4(),
+        projectId: uuidv4(),
+        title: 'Live Gaming Tournament',
+        focusArea: 3,
+        status: 4,
+        budgetAmount: 6000,
+        budgetToken: 1,
+        numberOfApplicants: 35,
+        numberOfDeliveries: 20,
+        deadline: '2025-01-30T23:59:59Z',
+        kpiTargets: {},
+        requiredReputation: 75,
+        matchRate: 82.0,
+        projectAvatar: 'https://i.pravatar.cc/150?u=live1',
+        createdAt: '2024-12-05T10:00:00Z',
+        updatedAt: '2024-12-10T10:00:00Z'
+      }
+    ],
+    activeCount: 28
+  }));
+});
+
+app.get('/api/dashboard/action-items', (req, res) => {
+  res.json(apiResponse({
+    items: [
+      {
+        id: uuidv4(),
+        type: 'DELIVERABLE_SUBMIT',
+        title: 'Submit deliverable for DeFi Campaign',
+        description: 'Content deadline approaching in 2 days',
+        priority: 'HIGH',
+        deadline: '2024-12-12T23:59:59Z',
+        relatedEntityId: uuidv4()
+      },
+      {
+        id: uuidv4(),
+        type: 'APPLICATION_REVIEW',
+        title: 'Check application status',
+        description: 'Your application has been reviewed',
+        priority: 'MEDIUM',
+        deadline: null,
+        relatedEntityId: uuidv4()
+      },
+      {
+        id: uuidv4(),
+        type: 'PAYMENT_PENDING',
+        title: 'Payment verification in progress',
+        description: 'Your deliverable is being verified for payment',
+        priority: 'LOW',
+        deadline: null,
+        relatedEntityId: uuidv4()
+      }
+    ]
+  }));
+});
+
+app.get('/api/dashboard/analytics', (req, res) => {
+  res.json(apiResponse({
+    totalCampaigns: 1247,
+    activeCampaigns: 186,
+    totalCreators: 8954,
+    totalValueProcessed: 12450000
+  }));
+});
+
+// ============ FILTER ENDPOINTS ============
+app.get('/api/filters/campaign-options', (req, res) => {
+  res.json(apiResponse({
+    focusAreas: [
+      { id: 1, name: 'DeFi', count: 45 },
+      { id: 2, name: 'NFT', count: 38 },
+      { id: 3, name: 'Gaming', count: 32 },
+      { id: 4, name: 'Infrastructure', count: 28 },
+      { id: 5, name: 'L2', count: 22 },
+      { id: 6, name: 'DAO', count: 18 },
+      { id: 7, name: 'Metaverse', count: 15 },
+      { id: 8, name: 'Trading', count: 12 },
+      { id: 9, name: 'Other', count: 8 }
+    ],
+    deliverableTypes: [
+      { id: 1, name: 'Twitter Posts', count: 62 },
+      { id: 2, name: 'Videos', count: 48 },
+      { id: 3, name: 'Articles', count: 35 },
+      { id: 4, name: 'AMAs', count: 25 },
+      { id: 5, name: 'Discord Management', count: 18 },
+      { id: 6, name: 'Community Growth', count: 15 },
+      { id: 7, name: 'Instagram Post', count: 12 },
+      { id: 8, name: 'TikTok', count: 10 }
+    ],
+    durations: [
+      { id: 1, name: 'Less Than 1 Week', count: 28 },
+      { id: 2, name: '1-2 Weeks', count: 42 },
+      { id: 3, name: '2-4 Weeks', count: 58 },
+      { id: 4, name: '1-3 Months', count: 35 },
+      { id: 5, name: '3+ Months', count: 18 }
+    ],
+    stages: [
+      { id: 1, name: 'Language' },
+      { id: 2, name: 'Rate Configuration' },
+      { id: 3, name: 'Notification Preferences' },
+      { id: 4, name: 'Privacy Controls' },
+      { id: 5, name: 'Wallet & Payout' },
+      { id: 6, name: 'Security' }
+    ],
+    budgetRanges: [
+      { min: 0, max: 1000, label: '$0 - $1,000', count: 45 },
+      { min: 1000, max: 5000, label: '$1,000 - $5,000', count: 78 },
+      { min: 5000, max: 10000, label: '$5,000 - $10,000', count: 52 },
+      { min: 10000, max: 50000, label: '$10,000 - $50,000', count: 28 },
+      { min: 50000, max: null, label: '$50,000+', count: 15 }
+    ]
   }));
 });
 
 // ============ PUBLIC MARKETPLACE ENDPOINTS ============
 app.get('/api/public/marketplace/campaigns', (req, res) => {
-  const { category, status, minBudget, maxBudget, page = 0, size = 20 } = req.query;
-  let filtered = mockCampaigns.filter(c => c.status === 'ACTIVE');
-  
-  if (category) filtered = filtered.filter(c => c.category.toLowerCase() === category.toLowerCase());
-  if (minBudget) filtered = filtered.filter(c => c.budgetAmount >= parseFloat(minBudget));
-  if (maxBudget) filtered = filtered.filter(c => c.budgetAmount <= parseFloat(maxBudget));
-  
   res.json(apiResponse({
-    campaigns: filtered.map(c => ({
-      ...c,
-      project: { projectId: c.projectId, name: "DeFi Protocol", logo: "https://api.dicebear.com/7.x/shapes/svg?seed=defi", verified: true }
-    })),
-    total: filtered.length,
-    page: parseInt(page),
-    size: parseInt(size),
-    totalPages: Math.ceil(filtered.length / parseInt(size))
-  }));
-});
-
-app.get('/api/public/marketplace/campaigns/:id', (req, res) => {
-  const campaign = mockCampaigns.find(c => c.campaignId === req.params.id);
-  if (!campaign) return res.status(404).json(apiError("NOT_FOUND", "Campaign not found"));
-  res.json(apiResponse({
-    ...campaign,
-    project: {
-      projectId: campaign.projectId,
-      name: "DeFi Protocol",
-      logo: "https://api.dicebear.com/7.x/shapes/svg?seed=defi",
-      website: "https://defiprotocol.io",
-      verified: true,
-      rating: 4.8,
-      completedCampaigns: 15
-    }
-  }));
-});
-
-app.get('/api/public/marketplace/creators', (req, res) => {
-  res.json(apiResponse({
-    creators: [
-      { ...mockCreatorProfile, completedCampaigns: 24, tier: "GOLD" },
-      { ...mockCreatorProfile, userId: uuidv4(), displayName: "NFTArtist", categories: ["NFT", "Art"], cvpiScore: 78.5, tier: "SILVER" },
-      { ...mockCreatorProfile, userId: uuidv4(), displayName: "GameStreamer", categories: ["GameFi", "Streaming"], cvpiScore: 91.2, tier: "PLATINUM" }
-    ],
-    total: 3,
-    page: 0,
-    size: 20,
-    totalPages: 1
-  }));
-});
-
-app.get('/api/public/marketplace/creators/:id', (req, res) => {
-  res.json(apiResponse({
-    ...mockCreatorProfile,
-    performance: {
-      completedCampaigns: 24,
-      cvpiScore: 82.3,
-      successRate: 95.8,
-      onTimeDeliveryRate: 98.2
-    },
-    portfolio: [
-      { title: "DeFi Protocol Explainer", type: "VIDEO", url: "https://youtube.com/watch?v=abc", thumbnail: "https://img.youtube.com/vi/abc/0.jpg" },
-      { title: "NFT Market Analysis Thread", type: "TWEET", url: "https://twitter.com/cryptoinfluencer/status/123", thumbnail: null }
+    campaigns: [
+      {
+        campaignId: uuidv4(),
+        title: 'Public DeFi Campaign',
+        focusArea: 1,
+        budgetAmount: 5000,
+        budgetToken: 1,
+        deadline: '2025-01-15T23:59:59Z'
+      }
     ]
   }));
 });
 
 app.get('/api/public/marketplace/stats', (req, res) => {
   res.json(apiResponse({
-    totalCreators: 15420,
-    totalProjects: 892,
-    totalCampaigns: 3456,
-    activeCampaigns: 234,
-    totalValueProcessed: 12500000,
-    averageCVPI: 76.4,
-    topCategories: [
-      { category: "DeFi", campaigns: 892, creators: 4521 },
-      { category: "NFT", campaigns: 1245, creators: 6230 },
-      { category: "GameFi", campaigns: 567, creators: 2890 }
-    ],
-    lastUpdated: new Date().toISOString()
+    totalCampaigns: 1247,
+    activeCampaigns: 186,
+    totalCreators: 8954,
+    totalProjects: 542,
+    totalValueProcessed: 12450000,
+    averageCampaignBudget: 4520
   }));
-});
-
-app.get('/api/public/marketplace/categories', (req, res) => {
-  res.json(apiResponse({ categories: mockCategories }));
-});
-
-app.get('/api/public/marketplace/projects', (req, res) => {
-  res.json(apiResponse({
-    projects: [
-      { projectId: "550e8400-e29b-41d4-a716-446655440002", name: "DeFi Protocol", logo: "https://api.dicebear.com/7.x/shapes/svg?seed=defi", category: "DeFi", verified: true, rating: 4.8, totalCampaigns: 15, activeCampaigns: 3 },
-      { projectId: uuidv4(), name: "NFT Marketplace", logo: "https://api.dicebear.com/7.x/shapes/svg?seed=nft", category: "NFT", verified: true, rating: 4.6, totalCampaigns: 22, activeCampaigns: 5 }
-    ],
-    total: 2,
-    page: 0,
-    size: 20,
-    totalPages: 1
-  }));
-});
-
-app.get('/api/public/marketplace/projects/:id', (req, res) => {
-  res.json(apiResponse({
-    projectId: req.params.id,
-    name: "DeFi Protocol",
-    logo: "https://api.dicebear.com/7.x/shapes/svg?seed=defi",
-    bio: "Next-generation DeFi protocol with innovative yield strategies",
-    website: "https://defiprotocol.io",
-    category: "DeFi",
-    verified: true,
-    socialLinks: { twitter: "https://twitter.com/defiprotocol", discord: "https://discord.gg/defiprotocol" },
-    stats: { totalCampaigns: 15, completedCampaigns: 12, averageRating: 4.8, totalCreatorsWorkedWith: 45, averageCVPI: 81.2 },
-    recentCampaigns: mockCampaigns.slice(0, 2)
-  }));
-});
-
-// ============ ADMIN ENDPOINTS ============
-app.get('/api/admin/campaigns', (req, res) => {
-  res.json(apiResponse({
-    campaigns: mockCampaigns.map(c => ({ ...c, projectName: "DeFi Protocol", flagged: false })),
-    stats: { total: mockCampaigns.length, active: 3, completed: 0, suspended: 0, flagged: 0, totalBudgetLocked: 23000 },
-    pagination: { total: mockCampaigns.length, page: 0, size: 20, totalPages: 1 }
-  }));
-});
-
-app.get('/api/admin/campaigns/:id', (req, res) => {
-  const campaign = mockCampaigns.find(c => c.campaignId === req.params.id);
-  if (!campaign) return res.status(404).json(apiError("NOT_FOUND", "Campaign not found"));
-  res.json(apiResponse({
-    ...campaign,
-    project: { projectId: campaign.projectId, projectName: "DeFi Protocol", walletAddress: "0x1234...5678", reputationScore: 92.5 },
-    creators: [{ creatorId: "550e8400-e29b-41d4-a716-446655440001", creatorName: "CryptoInfluencer", status: "ACTIVE", payment: 800, deliverablesCompleted: 2 }],
-    deliverables: mockDeliverables,
-    flagged: false
-  }));
-});
-
-app.put('/api/admin/campaigns/:id/suspend', (req, res) => {
-  res.json(apiResponse({
-    campaignId: req.params.id,
-    previousStatus: "ACTIVE",
-    newStatus: "SUSPENDED",
-    action: "SUSPEND",
-    adminId: "admin-001",
-    timestamp: new Date().toISOString(),
-    notes: req.body.reason
-  }));
-});
-
-app.put('/api/admin/campaigns/:id/resume', (req, res) => {
-  res.json(apiResponse({
-    campaignId: req.params.id,
-    previousStatus: "SUSPENDED",
-    newStatus: "ACTIVE",
-    action: "RESUME",
-    adminId: "admin-001",
-    timestamp: new Date().toISOString()
-  }));
-});
-
-app.put('/api/admin/campaigns/:id/cancel', (req, res) => {
-  res.json(apiResponse({
-    campaignId: req.params.id,
-    previousStatus: "ACTIVE",
-    newStatus: "CANCELLED",
-    action: "FORCE_CANCEL",
-    adminId: "admin-001",
-    timestamp: new Date().toISOString(),
-    notes: req.body.reason
-  }));
-});
-
-app.get('/api/admin/users', (req, res) => {
-  res.json(apiResponse({
-    users: [mockUsers.creator1, mockUsers.project1],
-    pagination: { total: 2, page: 0, size: 20, totalPages: 1 }
-  }));
-});
-
-app.get('/api/admin/users/:id', (req, res) => {
-  res.json(apiResponse(mockUsers.creator1));
-});
-
-app.put('/api/admin/users/:id/suspend', (req, res) => {
-  res.json(apiResponse({
-    userId: req.params.id,
-    status: "SUSPENDED",
-    reason: req.body.reason,
-    suspendedAt: new Date().toISOString()
-  }));
-});
-
-app.get('/api/admin/analytics/overview', (req, res) => {
-  res.json(apiResponse({
-    totalUsers: 16312,
-    newUsers: 234,
-    activeCampaigns: 234,
-    completedCampaigns: 3222,
-    totalVolume: 12500000,
-    averageCVPI: 76.4
-  }));
-});
-
-// ============ HEALTH & ROOT ============
-app.get('/', (req, res) => {
-  res.json({
-    name: "AW3 Platform Mock API",
-    version: "1.0.0",
-    description: "Mock API for AW3 Platform with Swagger documentation",
-    documentation: "/docs",
-    swagger: {
-      yaml: "/swagger.yaml",
-      json: "/swagger.json"
-    },
-    endpoints: {
-      auth: "/api/auth/*",
-      creator: "/api/creator/*",
-      project: "/api/project/*",
-      admin: "/api/admin/*",
-      public: "/api/public/*"
-    }
-  });
-});
-
-app.get('/health', (req, res) => {
-  res.json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json(apiError("NOT_FOUND", `Endpoint ${req.method} ${req.path} not found`));
+  res.status(404).json(apiError('NOT_FOUND', `Endpoint ${req.path} not found`));
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json(apiError("INTERNAL_ERROR", "An internal server error occurred"));
+  console.error(err.stack);
+  res.status(500).json(apiError('INTERNAL_ERROR', 'Internal server error'));
 });
 
 app.listen(PORT, () => {
-  console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║   🚀 AW3 Platform Mock API Server                        ║
-║                                                           ║
-║   Server running on: http://localhost:${PORT}               ║
-║                                                           ║
-║   📚 Swagger UI:     http://localhost:${PORT}/docs          ║
-║   📄 OpenAPI YAML:   http://localhost:${PORT}/swagger.yaml  ║
-║   📄 OpenAPI JSON:   http://localhost:${PORT}/swagger.json  ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
-  `);
+  console.log(`AW3 Platform Mock API running on port ${PORT}`);
+  console.log(`Swagger UI: http://localhost:${PORT}/docs`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
 });
-
