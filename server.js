@@ -1718,6 +1718,518 @@ app.get('/api/project/analytics/overview', (req, res) => {
   }));
 });
 
+// ============ ADMIN DASHBOARD ============
+app.get('/api/admin/dashboard/stats', (req, res) => {
+  res.json(apiResponse({
+    totalCreators: 1240,
+    totalProjects: 480,
+    totalCampaigns: 2875,
+    activeDisputes: 24,
+    platformRevenue30d: 125000,
+    treasuryBalance: 450000,
+    systemStatus: {
+      overallStatus: 'healthy',
+      uptime30d: 99.97,
+      services: [
+        { name: 'API', status: 'healthy', latencyMs: 45, lastCheck: new Date().toISOString() },
+        { name: 'Database', status: 'healthy', latencyMs: 12, lastCheck: new Date().toISOString() },
+        { name: 'Oracle', status: 'degraded', latencyMs: 2300, lastCheck: new Date().toISOString() }
+      ]
+    },
+    recentActivity: [
+      { timestamp: new Date().toISOString(), adminUser: 'admin-a', actionType: 'Campaign', entityType: 'campaign', entityId: 'cmp-123', details: 'Force cancelled' },
+      { timestamp: new Date().toISOString(), adminUser: 'admin-b', actionType: 'Reputation', entityType: 'creator', entityId: 'creator-456', details: 'Adjusted reputation +25' }
+    ]
+  }));
+});
+
+// ============ ADMIN CREATORS ============
+app.get('/api/admin/creators', (req, res) => {
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+  const items = [
+    {
+      creatorId: 'creator-1',
+      displayName: 'TopCreator',
+      walletAddress: '0xabc123',
+      status: 'active',
+      reputationScore: 920,
+      reputationTier: 'S',
+      totalCampaigns: 78,
+      totalEarnings: 125000,
+      joinedAt: new Date(Date.now() - 200 * 24 * 3600 * 1000).toISOString()
+    },
+    {
+      creatorId: 'creator-2',
+      displayName: 'RisingStar',
+      walletAddress: '0xdef456',
+      status: 'suspended',
+      reputationScore: 680,
+      reputationTier: 'B',
+      totalCampaigns: 32,
+      totalEarnings: 38000,
+      joinedAt: new Date(Date.now() - 120 * 24 * 3600 * 1000).toISOString()
+    }
+  ];
+  res.json(apiResponse({
+    items,
+    page,
+    size,
+    total: 1240
+  }));
+});
+
+app.get('/api/admin/creators/:id', (req, res) => {
+  res.json(apiResponse({
+    summary: {
+      creatorId: req.params.id,
+      displayName: 'TopCreator',
+      walletAddress: '0xabc123',
+      status: 'active',
+      reputationScore: 920,
+      reputationTier: 'S',
+      totalCampaigns: 78,
+      totalEarnings: 125000,
+      joinedAt: new Date(Date.now() - 200 * 24 * 3600 * 1000).toISOString()
+    },
+    profile: {
+      focusArea: [1, 2],
+      languages: ['en', 'zh'],
+      bio: 'DeFi + NFT specialist',
+      socialAccounts: [
+        { platform: 1, handle: '@topcreator', link: 'https://twitter.com/topcreator', followers: 250000, verified: true }
+      ]
+    },
+    stats: {
+      campaignsCompleted: 70,
+      campaignsActive: 2,
+      avgCVPI: 62.5,
+      earningsTotal: 125000,
+      earnings30d: 8200
+    },
+    recentActivity: [
+      { timestamp: new Date().toISOString(), adminUser: 'admin-a', actionType: 'Status', entityType: 'creator', entityId: req.params.id, details: 'Status set to active', ipAddress: '203.0.113.5' }
+    ]
+  }));
+});
+
+app.post('/api/admin/creators/:id/status', (req, res) => {
+  res.json(apiResponse({
+    creatorId: req.params.id,
+    status: req.body.status,
+    reason: req.body.reason
+  }));
+});
+
+app.post('/api/admin/creators/:id/reputation/adjust', (req, res) => {
+  res.json(apiResponse({
+    creatorId: req.params.id,
+    delta: req.body.delta,
+    reason: req.body.reason,
+    newScore: 920 + (req.body.delta || 0)
+  }));
+});
+
+app.get('/api/admin/creators/:id/campaigns', (req, res) => {
+  res.json(apiResponse([
+    {
+      campaignId: 'cmp-1',
+      name: 'DeFi Launch',
+      projectName: 'ProjectX',
+      status: ENUMS.CampaignStatus[3],
+      budget: 25000,
+      applications: 120,
+      approvedApplications: 12,
+      cvpi: 68.5,
+      createdAt: new Date(Date.now() - 40 * 24 * 3600 * 1000).toISOString(),
+      flagged: false
+    }
+  ]));
+});
+
+app.get('/api/admin/creators/:id/financial', (req, res) => {
+  res.json(apiResponse({
+    earningsTotal: 125000,
+    earnings30d: 8200,
+    transactions: [
+      { date: new Date().toISOString(), type: 'Payment', campaign: 'cmp-1', amount: 2500, txHash: '0x123', status: 'Completed' }
+    ]
+  }));
+});
+
+app.get('/api/admin/creators/:id/reputation-history', (req, res) => {
+  res.json(apiResponse([
+    { timestamp: new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString(), score: 910, reason: 'Manual adjust +10' },
+    { timestamp: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(), score: 900, reason: 'Campaign success' }
+  ]));
+});
+
+app.get('/api/admin/creators/:id/audit-log', (req, res) => {
+  res.json(apiResponse([
+    { timestamp: new Date().toISOString(), adminUser: 'admin-a', actionType: 'Status', entityType: 'creator', entityId: req.params.id, details: 'Status set to active', ipAddress: '203.0.113.5' }
+  ]));
+});
+
+app.get('/api/admin/reputation/overview', (req, res) => {
+  res.json(apiResponse({
+    averageScore: 752,
+    tierCounts: { S: 24, A: 87, B: 156, C: 203, Newcomer: 142 },
+    manualAdjustments30d: 12
+  }));
+});
+
+app.get('/api/admin/reputation/manual-adjustments', (req, res) => {
+  res.json(apiResponse([
+    { delta: 25, reason: 'Outstanding delivery', effectiveAt: new Date().toISOString() },
+    { delta: -40, reason: 'Policy violation', effectiveAt: new Date().toISOString() }
+  ]));
+});
+
+app.put('/api/admin/reputation/tiers', (req, res) => {
+  res.json(apiResponse({
+    sTier: req.body.sTier ?? 900,
+    aTier: req.body.aTier ?? 800,
+    bTier: req.body.bTier ?? 700,
+    cTier: req.body.cTier ?? 600
+  }));
+});
+
+// ============ ADMIN PROJECTS ============
+app.get('/api/admin/projects', (req, res) => {
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+  const items = [
+    {
+      projectId: 'project-1',
+      projectName: 'ProjectX',
+      walletAddress: '0xproject',
+      status: 'active',
+      reputationScore: 810,
+      reputationTier: 'A',
+      totalCampaigns: 48,
+      totalBudgetSpent: 520000,
+      avgCampaignCVPI: 72.3,
+      joinedAt: new Date(Date.now() - 320 * 24 * 3600 * 1000).toISOString()
+    }
+  ];
+  res.json(apiResponse({ items, page, size, total: 480 }));
+});
+
+app.get('/api/admin/projects/:id', (req, res) => {
+  res.json(apiResponse({
+    summary: {
+      projectId: req.params.id,
+      projectName: 'ProjectX',
+      walletAddress: '0xproject',
+      status: 'active',
+      reputationScore: 810,
+      reputationTier: 'A',
+      totalCampaigns: 48,
+      totalBudgetSpent: 520000,
+      avgCampaignCVPI: 72.3,
+      joinedAt: new Date(Date.now() - 320 * 24 * 3600 * 1000).toISOString()
+    },
+    profile: {
+      bio: 'Leading DeFi infra project',
+      website: 'https://projectx.io',
+      socialLinks: [{ platform: 1, handle: '@projectx', link: 'https://twitter.com/projectx' }],
+      verificationStatus: 'verified'
+    },
+    stats: {
+      campaignsCreated: 48,
+      budgetSpent: 520000,
+      successRate: 89,
+      creatorsEngaged: 340
+    },
+    recentActivity: [
+      { timestamp: new Date().toISOString(), adminUser: 'admin-b', actionType: 'Status', entityType: 'project', entityId: req.params.id, details: 'Status checked', ipAddress: '203.0.113.5' }
+    ]
+  }));
+});
+
+app.post('/api/admin/projects/:id/status', (req, res) => {
+  res.json(apiResponse({
+    projectId: req.params.id,
+    status: req.body.status,
+    reason: req.body.reason
+  }));
+});
+
+app.post('/api/admin/projects/:id/reputation/adjust', (req, res) => {
+  res.json(apiResponse({
+    projectId: req.params.id,
+    delta: req.body.delta,
+    reason: req.body.reason,
+    newScore: 810 + (req.body.delta || 0)
+  }));
+});
+
+app.get('/api/admin/projects/:id/campaigns', (req, res) => {
+  res.json(apiResponse([
+    {
+      campaignId: 'cmp-10',
+      name: 'Infrastructure Rollout',
+      projectName: 'ProjectX',
+      status: ENUMS.CampaignStatus[3],
+      budget: 120000,
+      applications: 240,
+      approvedApplications: 36,
+      cvpi: 82.1,
+      createdAt: new Date(Date.now() - 25 * 24 * 3600 * 1000).toISOString(),
+      flagged: false
+    }
+  ]));
+});
+
+app.get('/api/admin/projects/:id/financial', (req, res) => {
+  res.json(apiResponse({
+    escrowLocked: 75000,
+    transactionHistory: [
+      { transactionId: uuidv4(), type: 'EscrowLock', amount: 50000, token: 'USDC', status: 'Completed', timestamp: new Date().toISOString() },
+      { transactionId: uuidv4(), type: 'PaymentRelease', amount: 15000, token: 'USDC', status: 'Completed', timestamp: new Date().toISOString() }
+    ]
+  }));
+});
+
+app.get('/api/admin/projects/:id/audit-log', (req, res) => {
+  res.json(apiResponse([
+    { timestamp: new Date().toISOString(), adminUser: 'admin-b', actionType: 'Status', entityType: 'project', entityId: req.params.id, details: 'Status check', ipAddress: '203.0.113.5' }
+  ]));
+});
+
+// ============ ADMIN CAMPAIGNS ============
+app.get('/api/admin/campaigns', (req, res) => {
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+  const items = [
+    {
+      campaignId: 'cmp-10',
+      name: 'Infrastructure Rollout',
+      projectName: 'ProjectX',
+      status: ENUMS.CampaignStatus[3],
+      budget: 120000,
+      applications: 240,
+      approvedApplications: 36,
+      cvpi: 82.1,
+      createdAt: new Date(Date.now() - 25 * 24 * 3600 * 1000).toISOString(),
+      flagged: false
+    }
+  ];
+  res.json(apiResponse({ items, page, size, total: 2875 }));
+});
+
+app.get('/api/admin/campaigns/:id', (req, res) => {
+  res.json(apiResponse({
+    campaignId: req.params.id,
+    name: 'Infrastructure Rollout',
+    projectName: 'ProjectX',
+    status: ENUMS.CampaignStatus[3],
+    budget: 120000,
+    applications: 240,
+    approvedApplications: 36,
+    cvpi: 82.1,
+    createdAt: new Date(Date.now() - 25 * 24 * 3600 * 1000).toISOString(),
+    flagged: false
+  }));
+});
+
+app.post('/api/admin/campaigns/:id/force-action', (req, res) => {
+  res.json(apiResponse({
+    campaignId: req.params.id,
+    action: req.body.action,
+    reason: req.body.reason,
+    status: 'applied'
+  }));
+});
+
+app.post('/api/admin/campaigns/:id/flag', (req, res) => {
+  res.json(apiResponse({
+    campaignId: req.params.id,
+    flagged: true,
+    reason: req.body.reason
+  }));
+});
+
+// ============ ADMIN DISPUTES ============
+app.get('/api/admin/disputes', (req, res) => {
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+  const items = [
+    {
+      disputeId: 'dsp-789',
+      status: 'inArbitration',
+      issueType: 'deliverable',
+      campaignId: 'cmp-10',
+      campaignName: 'Infrastructure Rollout',
+      initiator: 'ProjectX',
+      respondent: 'TopCreator',
+      amount: 5000,
+      filedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+      escalated: true
+    }
+  ];
+  res.json(apiResponse({ items, page, size, total: 156 }));
+});
+
+app.get('/api/admin/disputes/:id', (req, res) => {
+  res.json(apiResponse({
+    disputeId: req.params.id,
+    status: 'inArbitration',
+    issueType: 'deliverable',
+    campaignId: 'cmp-10',
+    campaignName: 'Infrastructure Rollout',
+    initiator: 'ProjectX',
+    respondent: 'TopCreator',
+    amount: 5000,
+    filedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+    escalated: true,
+    validatorsAssigned: 5,
+    votes: [
+      { validator: 'val-1', stakingTier: 'gold', vote: 'favorCreator', reason: 'Evidence aligns', timestamp: new Date().toISOString() }
+    ],
+    evidence: {
+      project: ['https://example.com/evidence/project'],
+      creator: ['https://example.com/evidence/creator']
+    },
+    activity: [
+      { timestamp: new Date().toISOString(), adminUser: 'admin-c', actionType: 'Dispute', entityType: 'dispute', entityId: req.params.id, details: 'Review in progress', ipAddress: '203.0.113.10' }
+    ]
+  }));
+});
+
+app.post('/api/admin/disputes/:id/resolve', (req, res) => {
+  res.json(apiResponse({
+    disputeId: req.params.id,
+    outcome: req.body.outcome,
+    allocation: req.body.allocation || { favorCreatorAmount: 2500, favorProjectAmount: 2500 },
+    reason: req.body.reason,
+    notifyParties: req.body.notifyParties ?? true
+  }));
+});
+
+// ============ ADMIN FINANCE ============
+app.get('/api/admin/finance/revenue', (req, res) => {
+  res.json(apiResponse({
+    totalRevenue30d: 125000,
+    totalCampaigns: 248,
+    avgRevenuePerCampaign: 504,
+    treasuryBalance: 450000,
+    distribution: [
+      { category: 'Treasury', percentage: 50, amount30d: 62500, status: 'Active', lastChanged: '2025-11-01' },
+      { category: 'Validators', percentage: 20, amount30d: 25000, status: 'Active', lastChanged: '2025-11-01' }
+    ]
+  }));
+});
+
+app.get('/api/admin/finance/fees', (req, res) => {
+  res.json(apiResponse({
+    tiers: [
+      { range: '$0 - $5,000', baseRate: 0.1, lastUpdated: '2025-11-01' },
+      { range: '$5,001 - $20,000', baseRate: 0.08, lastUpdated: '2025-11-01' }
+    ],
+    multipliers: {
+      complexity: { low: 0.8, medium: 1.0, high: 1.5 },
+      reputationDiscounts: { sTier: 0.4, aTier: 0.3, bTier: 0.2, cTier: 0.1 },
+      tokenDiscount: 0.2,
+      oracleFee: { base: 50, perAdditionalKPI: 10 }
+    }
+  }));
+});
+
+app.put('/api/admin/finance/fees', (req, res) => {
+  res.json(apiResponse({
+    tiers: req.body.tiers || [],
+    multipliers: req.body.multipliers || {}
+  }));
+});
+
+// ============ ADMIN CVPI ============
+app.get('/api/admin/cvpi/algorithm', (req, res) => {
+  res.json(apiResponse({
+    version: 'v1.2',
+    effectiveDate: '2025-11-01',
+    formula: 'CVPI = Total Campaign Cost / Verified Impact Score',
+    components: [
+      { name: 'Engagement', weight: 35, metrics: ['likes', 'comments', 'shares'], description: 'User interaction quality' },
+      { name: 'Reach', weight: 25, metrics: ['impressions', 'unique views'], description: 'Content visibility' }
+    ]
+  }));
+});
+
+app.put('/api/admin/cvpi/algorithm', (req, res) => {
+  res.json(apiResponse(req.body));
+});
+
+app.get('/api/admin/cvpi/benchmarks', (req, res) => {
+  res.json(apiResponse([
+    { vertical: 'DeFi', medianCVPI: 78.5, averageCVPI: 115.2, campaigns: 342, trend: -8.3 },
+    { vertical: 'NFT', medianCVPI: 92.7, averageCVPI: 138.9, campaigns: 289, trend: 3.1 }
+  ]));
+});
+
+app.get('/api/admin/cvpi/analytics', (req, res) => {
+  res.json(apiResponse({
+    totalCampaigns: 456,
+    completed: 389,
+    cvpiCalculated: 389,
+    mean: 127.5,
+    median: 85.3,
+    stdDev: 78.9,
+    p10: 32.5,
+    p25: 52.1,
+    p75: 156.8,
+    p90: 284.2,
+    distribution: [
+      { range: '0-50', count: 142, percentage: 36.5 },
+      { range: '50-100', count: 98, percentage: 25.2 }
+    ]
+  }));
+});
+
+// ============ ADMIN SYSTEM ============
+app.get('/api/admin/system/health', (req, res) => {
+  res.json(apiResponse({
+    overallStatus: 'healthy',
+    uptime30d: 99.97,
+    services: [
+      { name: 'API', status: 'healthy', latencyMs: 45, lastCheck: new Date().toISOString() },
+      { name: 'Database', status: 'healthy', latencyMs: 12, lastCheck: new Date().toISOString() },
+      { name: 'Oracle', status: 'degraded', latencyMs: 2300, lastCheck: new Date().toISOString() }
+    ]
+  }));
+});
+
+app.post('/api/admin/system/pause', (req, res) => {
+  res.json(apiResponse({
+    status: 'pausing',
+    message: `Platform pause initiated: ${req.body.reason || 'no reason provided'}`
+  }));
+});
+
+app.post('/api/admin/system/resume', (req, res) => {
+  res.json(apiResponse({
+    status: 'resuming',
+    message: `Platform resume initiated: ${req.body.reason || 'no reason provided'}`
+  }));
+});
+
+app.get('/api/admin/system/audit-logs', (req, res) => {
+  res.json(apiResponse([
+    { timestamp: new Date().toISOString(), adminUser: 'admin-a', actionType: 'System', entityType: 'config', entityId: 'fee-config', details: 'Updated fee tiers', ipAddress: '203.0.113.5' }
+  ]));
+});
+
+// ============ ADMIN SEARCH ============
+app.get('/api/admin/search', (req, res) => {
+  const q = req.query.q || '';
+  res.json(apiResponse([
+    { type: 'creator', id: 'creator-1', name: 'TopCreator', status: 'active', relevance: 0.98 },
+    { type: 'project', id: 'project-1', name: 'ProjectX', status: 'active', relevance: 0.92 },
+    { type: 'campaign', id: 'cmp-10', name: 'Infrastructure Rollout', status: 'ACTIVE', relevance: 0.88 },
+    { type: 'dispute', id: 'dsp-789', name: 'Dispute DSP-789', status: 'inArbitration', relevance: 0.81 }
+  ].filter(item => item.name.toLowerCase().includes(q.toLowerCase()) || item.id.toLowerCase().includes(q.toLowerCase()))));
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json(apiError('NOT_FOUND', `Endpoint ${req.path} not found`));
