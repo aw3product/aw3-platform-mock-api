@@ -51,6 +51,20 @@ tags:
     description: Filter options for campaign search
   - name: Public Marketplace
     description: Public marketplace endpoints
+  - name: Project Dashboard
+    description: Project dashboard and statistics
+  - name: Project Campaigns
+    description: Campaign management for projects
+  - name: Project Applications
+    description: Application review and management
+  - name: Project Deliverables
+    description: Deliverable verification and payments
+  - name: Project Analytics
+    description: Campaign analytics and insights
+  - name: Project Finance
+    description: Budget and payment management
+  - name: Project Creators
+    description: Creator discovery and management
 
 components:
   securitySchemes:
@@ -230,6 +244,58 @@ components:
         2 = Daily
         3 = Monthly
       example: 3
+
+    ProjectCampaignSort:
+      type: integer
+      enum: [1, 2, 3, 4, 5]
+      description: |
+        Sort options for project campaign list:
+        1 = Newest
+        2 = Budget High to Low
+        3 = Applications Most to Least
+        4 = CVPI Best to Worst
+        5 = End Date Soonest
+      example: 1
+
+    ApplicationSort:
+      type: integer
+      enum: [1, 2, 3, 4, 5]
+      description: |
+        Application sort enum:
+        1 = Newest
+        2 = Highest Reputation
+        3 = Best CVPI
+        4 = Most Followers
+        5 = Match Score
+      example: 2
+
+    PaymentStructure:
+      type: integer
+      enum: [1, 2, 3]
+      description: |
+        Payment structure enum:
+        1 = Fixed Payment
+        2 = Performance-Based
+        3 = Milestone-Based
+      example: 1
+
+    ApprovalMethod:
+      type: integer
+      enum: [1, 2]
+      description: |
+        Approval method enum:
+        1 = Pre-approval review before publishing
+        2 = Post-publishing review after publishing
+      example: 1
+
+    DurationType:
+      type: integer
+      enum: [1, 2]
+      description: |
+        Campaign duration type:
+        1 = Fixed Duration with end date
+        2 = Ongoing until closed
+      example: 1
 
     # ============ COMMON SCHEMAS ============
     ApiResponse:
@@ -1237,6 +1303,551 @@ components:
               count:
                 type: integer
 
+    # ============ PROJECT PORTAL SCHEMAS ============
+    ProjectDashboardStats:
+      type: object
+      required:
+        - activeCampaigns
+        - pendingApplications
+        - budgetAvailable
+        - deliverablesSubmitted
+      properties:
+        activeCampaigns:
+          type: integer
+          example: 3
+        pendingApplications:
+          type: integer
+          example: 12
+        budgetAvailable:
+          type: number
+          example: 25000
+        deliverablesSubmitted:
+          type: integer
+          example: 3
+        totalCampaigns:
+          type: integer
+          example: 28
+        totalSpent:
+          type: number
+          example: 245000
+        reputationScore:
+          type: integer
+          example: 780
+        reputationTier:
+          type: string
+          example: "B"
+        avgCampaignCVPI:
+          type: number
+          example: 95.3
+
+    CampaignCreateRequest:
+      type: object
+      required:
+        - name
+        - focusArea
+        - description
+        - durationType
+        - startDate
+        - creatorBudget
+        - numberOfCreators
+        - paymentStructure
+        - deliverableTypes
+        - contentGuidelines
+        - approvalMethod
+        - kpiTargets
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: "DeFi Protocol Launch"
+        focusArea:
+          $ref: '#/components/schemas/FocusArea'
+        description:
+          type: string
+          maxLength: 2000
+        durationType:
+          $ref: '#/components/schemas/DurationType'
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+          nullable: true
+        coverImage:
+          type: string
+          format: uri
+        creatorBudget:
+          type: number
+          minimum: 500
+          example: 10000
+        numberOfCreators:
+          type: integer
+          minimum: 1
+          maximum: 50
+          example: 3
+        paymentStructure:
+          $ref: '#/components/schemas/PaymentStructure'
+        payWithAW3Token:
+          type: boolean
+          default: false
+        deliverableTypes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliverableType'
+        contentGuidelines:
+          type: string
+          maxLength: 2000
+        approvalMethod:
+          $ref: '#/components/schemas/ApprovalMethod'
+        kpiTargets:
+          type: array
+          items:
+            type: object
+            required:
+              - metricType
+              - targetValue
+              - weight
+            properties:
+              metricType:
+                type: string
+                enum: [EngagementRate, Impressions, ClickThroughRate, Conversions, FollowerGrowth, Custom]
+              targetValue:
+                type: number
+              weight:
+                type: integer
+                minimum: 0
+                maximum: 100
+              verificationMethod:
+                type: string
+                enum: [Oracle, Manual, Hybrid]
+                default: Oracle
+        minReputationScore:
+          type: integer
+          minimum: 0
+          maximum: 1000
+          default: 600
+        cvpiRange:
+          type: object
+          properties:
+            min:
+              type: number
+              default: 0
+            max:
+              type: number
+              default: 150
+
+    CampaignTransactionResponse:
+      type: object
+      required:
+        - campaignId
+        - transactionHash
+        - status
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        transactionHash:
+          type: string
+          example: "0x8a2f3d1c..."
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, FAILED]
+        estimatedConfirmationTime:
+          type: integer
+        totalLocked:
+          type: number
+
+    ProjectCampaignListItem:
+      type: object
+      required:
+        - campaignId
+        - name
+        - focusArea
+        - status
+        - budgetTotal
+        - budgetRemaining
+      properties:
+        campaignId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        focusArea:
+          $ref: '#/components/schemas/FocusArea'
+        status:
+          $ref: '#/components/schemas/CampaignStatus'
+        budgetTotal:
+          type: number
+        budgetRemaining:
+          type: number
+        applicationCount:
+          type: integer
+        approvedCount:
+          type: integer
+        deliverableCount:
+          type: integer
+        daysRemaining:
+          type: integer
+          nullable: true
+        cvpiScore:
+          type: number
+          nullable: true
+        cvpiClassification:
+          type: string
+          enum: [Excellent, Good, Average, Below Average, Poor]
+        progressStage:
+          type: string
+          enum: [Applications, InProgress, Verification, Completed]
+        createdAt:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    CampaignMetrics:
+      type: object
+      required:
+        - budgetStatus
+        - applications
+        - progress
+        - cvpiScore
+      properties:
+        budgetStatus:
+          type: object
+          properties:
+            total:
+              type: number
+            remaining:
+              type: number
+            spent:
+              type: number
+            percentageUsed:
+              type: number
+        applications:
+          type: object
+          properties:
+            received:
+              type: integer
+            approved:
+              type: integer
+            pendingReview:
+              type: integer
+            rejected:
+              type: integer
+        progress:
+          type: object
+          properties:
+            status:
+              $ref: '#/components/schemas/CampaignStatus'
+            daysElapsed:
+              type: integer
+            daysTotal:
+              type: integer
+            percentageComplete:
+              type: number
+            endDate:
+              type: string
+              format: date-time
+        cvpiScore:
+          type: object
+          properties:
+            current:
+              type: number
+            classification:
+              type: string
+            trend:
+              type: number
+
+    ProjectApplication:
+      type: object
+      required:
+        - applicationId
+        - campaignId
+        - creatorId
+        - status
+      properties:
+        applicationId:
+          type: string
+          format: uuid
+        campaignId:
+          type: string
+          format: uuid
+        campaignName:
+          type: string
+        creatorId:
+          type: string
+          format: uuid
+        creatorName:
+          type: string
+        creatorAvatar:
+          type: string
+          format: uri
+        reputation:
+          type: integer
+        reputationTier:
+          type: string
+        avgCVPI:
+          type: number
+        cvpiClassification:
+          type: string
+        socialStats:
+          type: array
+          items:
+            type: object
+            properties:
+              platform:
+                $ref: '#/components/schemas/SocialPlatform'
+              followers:
+                type: integer
+        campaignsCompleted:
+          type: integer
+        successRate:
+          type: number
+        applicationMessage:
+          type: string
+        portfolioLinks:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+                format: uri
+              title:
+                type: string
+              description:
+                type: string
+        appliedAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/ApplicationStatus'
+        matchScore:
+          type: number
+          nullable: true
+
+    BatchApprovalRequest:
+      type: object
+      required:
+        - applicationIds
+      properties:
+        applicationIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+
+    BatchApprovalResponse:
+      type: object
+      required:
+        - successCount
+        - failedIds
+      properties:
+        successCount:
+          type: integer
+        failedIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              applicationId:
+                type: string
+                format: uuid
+              reason:
+                type: string
+
+    CampaignAnalytics:
+      type: object
+      required:
+        - summary
+        - cvpiBreakdown
+        - kpiAchievement
+        - audienceReach
+        - costEfficiency
+      properties:
+        summary:
+          type: object
+          properties:
+            totalSpend:
+              type: number
+            avgCVPI:
+              type: number
+            kpiSuccessRate:
+              type: number
+            avgCreatorReputation:
+              type: integer
+        cvpiBreakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              creatorName:
+                type: string
+              cvpiScore:
+                type: number
+              classification:
+                type: string
+        kpiAchievement:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              kpiName:
+                type: string
+              achievementPercentage:
+                type: number
+        audienceReach:
+          type: object
+          properties:
+            totalImpressions:
+              type: integer
+            uniqueReach:
+              type: integer
+            totalEngagements:
+              type: integer
+            avgEngagementRate:
+              type: number
+        costEfficiency:
+          type: object
+          properties:
+            costPer1KImpressions:
+              type: number
+            costPerEngagement:
+              type: number
+            costPerConversion:
+              type: number
+
+    CampaignFinancials:
+      type: object
+      required:
+        - escrowOverview
+        - budgetAllocation
+        - paymentHistory
+        - feeBreakdown
+      properties:
+        escrowOverview:
+          type: object
+          properties:
+            smartContractAddress:
+              type: string
+            chain:
+              type: string
+              example: "BASE Mainnet"
+            totalLocked:
+              type: number
+            totalReleased:
+              type: number
+            remainingBalance:
+              type: number
+            expectedRefund:
+              type: number
+        budgetAllocation:
+          type: object
+          properties:
+            creatorPayments:
+              type: number
+            serviceFees:
+              type: number
+            oracleFees:
+              type: number
+            escrowBuffer:
+              type: number
+            unused:
+              type: number
+        paymentHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date-time
+              type:
+                type: string
+                enum: [CreatorPayment, ServiceFee, OracleFee, EscrowLock, BufferRefund]
+              recipient:
+                type: string
+              amount:
+                type: number
+              status:
+                type: string
+                enum: [Completed, Pending, Failed]
+              transactionHash:
+                type: string
+        feeBreakdown:
+          type: object
+          properties:
+            baseRate:
+              type: number
+            complexityMultiplier:
+              type: number
+            reputationDiscount:
+              type: number
+            tokenPaymentDiscount:
+              type: number
+            effectiveRate:
+              type: number
+            totalSaved:
+              type: number
+
+    CreatorDiscoveryResult:
+      type: object
+      required:
+        - creatorId
+        - displayName
+        - reputation
+        - avgCVPI
+      properties:
+        creatorId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        reputation:
+          type: integer
+        reputationTier:
+          type: string
+        avgCVPI:
+          type: number
+        cvpiClassification:
+          type: string
+        socialStats:
+          type: array
+          items:
+            type: object
+            properties:
+              platform:
+                $ref: '#/components/schemas/SocialPlatform'
+              followers:
+                type: integer
+        campaignsCompleted:
+          type: integer
+        successRate:
+          type: number
+        verticalExperience:
+          type: array
+          items:
+            $ref: '#/components/schemas/FocusArea'
+        estimatedCVPI:
+          type: number
+        available:
+          type: boolean
+
 paths:
   # ============ AUTH ENDPOINTS ============
   /auth/wallet-connect:
@@ -2142,6 +2753,949 @@ paths:
       responses:
         '200':
           description: Platform stats
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  # ============ PROJECT DASHBOARD ENDPOINTS ============
+  /project/dashboard/stats:
+    get:
+      tags: [Project Dashboard]
+      summary: Get project dashboard statistics
+      description: Returns key metrics for project dashboard including active campaigns, pending applications, budget available
+      operationId: getProjectDashboardStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProjectDashboardStats'
+
+  # ============ PROJECT CAMPAIGNS ENDPOINTS ============
+  /project/campaigns:
+    get:
+      tags: [Project Campaigns]
+      summary: List project campaigns
+      description: Get all campaigns created by the project with filtering and sorting
+      operationId: listProjectCampaigns
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: Filter by campaign status
+          schema:
+            $ref: '#/components/schemas/CampaignStatus'
+        - name: focusArea
+          in: query
+          description: Filter by vertical
+          schema:
+            $ref: '#/components/schemas/FocusArea'
+        - name: minBudget
+          in: query
+          schema:
+            type: number
+        - name: maxBudget
+          in: query
+          schema:
+            type: number
+        - name: sort
+          in: query
+          description: Sort option
+          schema:
+            $ref: '#/components/schemas/ProjectCampaignSort'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Campaign list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          campaigns:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ProjectCampaignListItem'
+                          pagination:
+                            $ref: '#/components/schemas/Pagination'
+    post:
+      tags: [Project Campaigns]
+      summary: Create new campaign
+      description: Create a new campaign and lock funds in escrow via smart contract
+      operationId: createProjectCampaign
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignCreateRequest'
+      responses:
+        '200':
+          description: Campaign creation transaction initiated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CampaignTransactionResponse'
+
+  /project/campaigns/{id}:
+    get:
+      tags: [Project Campaigns]
+      summary: Get campaign details
+      operationId: getProjectCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CampaignDetail'
+    put:
+      tags: [Project Campaigns]
+      summary: Update campaign (limited fields)
+      description: Update editable campaign fields. Only certain fields can be edited after campaign is launched on-chain.
+      operationId: updateProjectCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                contentGuidelines:
+                  type: string
+                coverImage:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Campaign updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [Project Campaigns]
+      summary: Delete draft campaign
+      description: Delete campaign only if in draft status. Cannot delete campaigns on-chain.
+      operationId: deleteProjectCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /project/campaigns/{id}/pause:
+    post:
+      tags: [Project Campaigns]
+      summary: Pause active campaign
+      description: Temporarily pause campaign to stop accepting new applications
+      operationId: pauseProjectCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Campaign paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /project/campaigns/{id}/resume:
+    post:
+      tags: [Project Campaigns]
+      summary: Resume paused campaign
+      operationId: resumeProjectCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /project/campaigns/{id}/extend:
+    post:
+      tags: [Project Campaigns]
+      summary: Extend campaign duration
+      description: Extend campaign end date
+      operationId: extendProjectCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newEndDate
+              properties:
+                newEndDate:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Campaign extended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /project/campaigns/{id}/invite:
+    post:
+      tags: [Project Campaigns]
+      summary: Invite specific creators to campaign
+      operationId: inviteCreatorsToCampaign
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - creatorIds
+              properties:
+                creatorIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                message:
+                  type: string
+      responses:
+        '200':
+          description: Invitations sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /project/campaigns/{id}/export:
+    get:
+      tags: [Project Campaigns]
+      summary: Export campaign report
+      description: Generate and download campaign report in PDF or Excel format
+      operationId: exportCampaignReport
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [PDF, EXCEL, CSV]
+      responses:
+        '200':
+          description: Report file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /project/campaigns/{id}/metrics:
+    get:
+      tags: [Project Campaigns]
+      summary: Get campaign key metrics
+      description: Returns budget status, applications, progress, and CVPI score for campaign dashboard view
+      operationId: getCampaignMetrics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign metrics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CampaignMetrics'
+
+  /project/campaigns/{id}/overview:
+    get:
+      tags: [Project Campaigns]
+      summary: Get campaign overview tab data
+      description: Returns campaign details, KPI targets, and approved creators for Overview tab
+      operationId: getCampaignOverview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign overview
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  /project/campaigns/{id}/analytics:
+    get:
+      tags: [Project Analytics]
+      summary: Get campaign analytics
+      description: Returns comprehensive analytics including CVPI breakdown, KPI achievement, audience reach, and cost efficiency
+      operationId: getCampaignAnalytics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign analytics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CampaignAnalytics'
+
+  /project/campaigns/{id}/financials:
+    get:
+      tags: [Project Finance]
+      summary: Get campaign financial details
+      description: Returns escrow overview, budget allocation, payment history, and fee breakdown
+      operationId: getCampaignFinancials
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Campaign financials
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CampaignFinancials'
+
+  # ============ PROJECT APPLICATIONS ENDPOINTS ============
+  /project/applications:
+    get:
+      tags: [Project Applications]
+      summary: List applications for project campaigns
+      description: Get all applications with filtering and sorting options
+      operationId: listProjectApplications
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by application status
+          schema:
+            $ref: '#/components/schemas/ApplicationStatus'
+        - name: sort
+          in: query
+          description: Sort option
+          schema:
+            $ref: '#/components/schemas/ApplicationSort'
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: DESC
+        - name: minReputation
+          in: query
+          schema:
+            type: integer
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Applications list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          applications:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ProjectApplication'
+                          pagination:
+                            $ref: '#/components/schemas/Pagination'
+
+  /project/applications/{id}:
+    get:
+      tags: [Project Applications]
+      summary: Get application details
+      operationId: getProjectApplication
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Application details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ProjectApplication'
+
+  /project/applications/approve:
+    post:
+      tags: [Project Applications]
+      summary: Approve applications (batch)
+      description: Approve one or multiple applications at once
+      operationId: approveApplications
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchApprovalRequest'
+      responses:
+        '200':
+          description: Approval results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BatchApprovalResponse'
+
+  /project/applications/reject:
+    post:
+      tags: [Project Applications]
+      summary: Reject applications (batch)
+      description: Reject one or multiple applications at once
+      operationId: rejectApplications
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/BatchApprovalRequest'
+                - type: object
+                  properties:
+                    reason:
+                      type: string
+      responses:
+        '200':
+          description: Rejection results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/BatchApprovalResponse'
+
+  /project/applications/{id}/deliverables:
+    get:
+      tags: [Project Deliverables]
+      summary: Get deliverables for specific application
+      operationId: getApplicationDeliverables
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deliverables list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  # ============ PROJECT DELIVERABLES ENDPOINTS ============
+  /project/deliverables:
+    get:
+      tags: [Project Deliverables]
+      summary: List deliverables for verification
+      description: Get all submitted deliverables across campaigns
+      operationId: listProjectDeliverables
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeliverableStatus'
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deliverables list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  /project/deliverables/{id}:
+    get:
+      tags: [Project Deliverables]
+      summary: Get deliverable details
+      operationId: getProjectDeliverable
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deliverable details with oracle verification results
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  /project/deliverables/{id}/verify:
+    post:
+      tags: [Project Deliverables]
+      summary: Verify and release payment
+      description: Approve deliverable and trigger payment release from escrow
+      operationId: verifyDeliverable
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Payment release initiated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  /project/deliverables/{id}/request-revision:
+    post:
+      tags: [Project Deliverables]
+      summary: Request revision
+      operationId: requestDeliverableRevision
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - feedback
+              properties:
+                feedback:
+                  type: string
+      responses:
+        '200':
+          description: Revision requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /project/deliverables/{id}/reject:
+    post:
+      tags: [Project Deliverables]
+      summary: Reject deliverable
+      description: Reject deliverable with reason (may trigger dispute)
+      operationId: rejectDeliverable
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Deliverable rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  # ============ PROJECT CREATORS ENDPOINTS ============
+  /project/creators/discover:
+    get:
+      tags: [Project Creators]
+      summary: Discover creators
+      description: Search and filter creators based on criteria with CVPI-focused results
+      operationId: discoverCreators
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: minReputation
+          in: query
+          schema:
+            type: integer
+        - name: maxReputation
+          in: query
+          schema:
+            type: integer
+        - name: minCVPI
+          in: query
+          schema:
+            type: number
+        - name: maxCVPI
+          in: query
+          schema:
+            type: number
+        - name: platform
+          in: query
+          schema:
+            $ref: '#/components/schemas/SocialPlatform'
+        - name: minFollowers
+          in: query
+          schema:
+            type: integer
+        - name: focusArea
+          in: query
+          schema:
+            $ref: '#/components/schemas/FocusArea'
+        - name: availableOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [BestCVPI, HighestReputation, MostFollowers, MostCampaigns]
+            default: BestCVPI
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Creators list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          creators:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/CreatorDiscoveryResult'
+                          pagination:
+                            $ref: '#/components/schemas/Pagination'
+
+  /project/creators/recommended:
+    get:
+      tags: [Project Creators]
+      summary: Get recommended creators
+      description: AI-recommended creators based on project campaign history and preferences
+      operationId: getRecommendedCreators
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: campaignId
+          in: query
+          description: Get recommendations for specific campaign
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Recommended creators
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  /project/creators/{id}:
+    get:
+      tags: [Project Creators]
+      summary: Get creator profile details
+      operationId: getCreatorProfileForProject
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Creator profile
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+
+  # ============ PROJECT ANALYTICS ENDPOINTS ============
+  /project/analytics/overview:
+    get:
+      tags: [Project Analytics]
+      summary: Get analytics overview
+      description: Returns comprehensive analytics across all campaigns
+      operationId: getProjectAnalyticsOverview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/TimePeriod'
+        - name: compareWith
+          in: query
+          schema:
+            type: string
+            enum: [PreviousPeriod, PlatformAverage, VerticalAverage]
+      responses:
+        '200':
+          description: Analytics overview
           content:
             application/json:
               schema:

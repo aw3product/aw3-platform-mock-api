@@ -1022,6 +1022,702 @@ app.get('/api/public/marketplace/stats', (req, res) => {
   }));
 });
 
+// ============ PROJECT DASHBOARD ENDPOINTS ============
+app.get('/api/project/dashboard/stats', (req, res) => {
+  res.json(apiResponse({
+    activeCampaigns: 3,
+    pendingApplications: 12,
+    budgetAvailable: 25000,
+    deliverablesSubmitted: 3,
+    totalCampaigns: 28,
+    totalSpent: 245000,
+    reputationScore: 780,
+    reputationTier: 'B',
+    avgCampaignCVPI: 95.3
+  }));
+});
+
+// ============ PROJECT CAMPAIGNS ENDPOINTS ============
+app.get('/api/project/campaigns', (req, res) => {
+  const campaigns = [
+    {
+      campaignId: uuidv4(),
+      name: 'DeFi Protocol Launch',
+      focusArea: 1,
+      status: 3,
+      budgetTotal: 10000,
+      budgetRemaining: 8000,
+      applicationCount: 45,
+      approvedCount: 3,
+      deliverableCount: 2,
+      daysRemaining: 12,
+      cvpiScore: 85.3,
+      cvpiClassification: 'Good',
+      progressStage: 'InProgress',
+      createdAt: '2024-12-01T10:00:00Z',
+      endDate: '2025-01-15T23:59:59Z'
+    },
+    {
+      campaignId: uuidv4(),
+      name: 'NFT Collection Drop',
+      focusArea: 2,
+      status: 3,
+      budgetTotal: 7000,
+      budgetRemaining: 5500,
+      applicationCount: 32,
+      approvedCount: 2,
+      deliverableCount: 1,
+      daysRemaining: 18,
+      cvpiScore: 78.6,
+      cvpiClassification: 'Good',
+      progressStage: 'Verification',
+      createdAt: '2024-11-20T10:00:00Z',
+      endDate: '2025-01-20T23:59:59Z'
+    },
+    {
+      campaignId: uuidv4(),
+      name: 'Gaming Partnership',
+      focusArea: 3,
+      status: 5,
+      budgetTotal: 8500,
+      budgetRemaining: 0,
+      applicationCount: 28,
+      approvedCount: 2,
+      deliverableCount: 2,
+      daysRemaining: null,
+      cvpiScore: 92.1,
+      cvpiClassification: 'Good',
+      progressStage: 'Completed',
+      createdAt: '2024-10-15T10:00:00Z',
+      endDate: '2024-11-30T23:59:59Z'
+    }
+  ];
+
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+
+  res.json(apiResponse({
+    campaigns,
+    pagination: {
+      currentPage: page,
+      totalPages: 2,
+      totalElements: 28,
+      pageSize: size
+    }
+  }));
+});
+
+app.post('/api/project/campaigns', (req, res) => {
+  const campaignId = uuidv4();
+  res.json(apiResponse({
+    campaignId,
+    transactionHash: '0x8a2f' + Math.random().toString(36).substring(2, 15),
+    status: 'PENDING',
+    estimatedConfirmationTime: 30,
+    totalLocked: req.body.creatorBudget * 1.12
+  }));
+});
+
+app.get('/api/project/campaigns/:id', (req, res) => {
+  res.json(apiResponse({
+    campaignId: req.params.id,
+    projectId: uuidv4(),
+    name: 'DeFi Protocol Launch',
+    description: 'Help us launch our revolutionary DeFi protocol with engaging content that educates and attracts users.',
+    objective: 'Increase platform awareness and drive user signups through authentic creator content showcasing our unique features and benefits.',
+    focusArea: 1,
+    status: 3,
+    budgetAmount: 10000,
+    budgetToken: 1,
+    numberOfCreators: 3,
+    numberOfApplicants: 45,
+    numberOfDeliveries: 5,
+    deadline: '2025-01-15T23:59:59Z',
+    complexity: 2,
+    kpiTargets: {
+      views: 50000,
+      engagement: 5,
+      conversions: 500
+    },
+    requiredReputation: 75,
+    matchRate: 92.5,
+    projectInfo: {
+      projectId: uuidv4(),
+      projectName: 'DefiMax Protocol',
+      projectAvatar: 'https://i.pravatar.cc/150?u=project1',
+      website: 'https://defimax.io',
+      socialChannels: [
+        {
+          platform: 1,
+          handle: '@DefiMax',
+          link: 'https://twitter.com/defimax',
+          followers: 45000,
+          verified: true,
+          verifiedAt: '2024-01-01T00:00:00Z'
+        }
+      ]
+    },
+    paymentTerms: {
+      paymentMethod: 'USDC on Ethereum mainnet via smart contract escrow',
+      paymentSchedule: 'Milestone-based: 50% upon content approval, 50% after 7 days performance verification',
+      paymentConditions: 'Content must meet quality standards and achieve minimum 70% of target KPIs'
+    },
+    createdAt: '2024-12-01T10:00:00Z',
+    updatedAt: '2024-12-10T10:00:00Z'
+  }));
+});
+
+app.put('/api/project/campaigns/:id', (req, res) => {
+  res.json(apiResponse({
+    message: 'Campaign updated successfully'
+  }));
+});
+
+app.delete('/api/project/campaigns/:id', (req, res) => {
+  res.json(apiResponse({
+    message: 'Campaign deleted successfully'
+  }));
+});
+
+app.post('/api/project/campaigns/:id/pause', (req, res) => {
+  res.json(apiResponse({
+    message: 'Campaign paused',
+    status: 'PAUSED'
+  }));
+});
+
+app.post('/api/project/campaigns/:id/resume', (req, res) => {
+  res.json(apiResponse({
+    message: 'Campaign resumed',
+    status: 'ACTIVE'
+  }));
+});
+
+app.post('/api/project/campaigns/:id/extend', (req, res) => {
+  res.json(apiResponse({
+    message: 'Campaign extended',
+    newEndDate: req.body.newEndDate
+  }));
+});
+
+app.post('/api/project/campaigns/:id/invite', (req, res) => {
+  res.json(apiResponse({
+    message: `${req.body.creatorIds.length} invitations sent`,
+    invited: req.body.creatorIds
+  }));
+});
+
+app.get('/api/project/campaigns/:id/export', (req, res) => {
+  res.json(apiResponse({
+    message: 'Report generation initiated',
+    format: req.query.format,
+    downloadUrl: `/downloads/campaign-${req.params.id}.${req.query.format.toLowerCase()}`
+  }));
+});
+
+app.get('/api/project/campaigns/:id/metrics', (req, res) => {
+  res.json(apiResponse({
+    budgetStatus: {
+      total: 10000,
+      remaining: 8000,
+      spent: 2000,
+      percentageUsed: 20
+    },
+    applications: {
+      received: 45,
+      approved: 3,
+      pendingReview: 12,
+      rejected: 30
+    },
+    progress: {
+      status: 3,
+      daysElapsed: 18,
+      daysTotal: 30,
+      percentageComplete: 60,
+      endDate: '2025-01-15T23:59:59Z'
+    },
+    cvpiScore: {
+      current: 85.3,
+      classification: 'Good',
+      trend: 3.2
+    }
+  }));
+});
+
+app.get('/api/project/campaigns/:id/overview', (req, res) => {
+  res.json(apiResponse({
+    campaignId: req.params.id,
+    details: {
+      name: 'DeFi Protocol Launch',
+      description: 'Help us launch our revolutionary DeFi protocol',
+      deliverableRequirements: ['Twitter Thread', 'YouTube Video', 'Blog Article'],
+      contentGuidelines: 'Focus on education, positive tone, include #DeFi hashtags'
+    },
+    kpiTargets: [
+      {
+        kpiName: 'Engagement Rate',
+        target: 7.5,
+        weight: 40,
+        currentAverage: 8.2,
+        status: 'Exceeding'
+      },
+      {
+        kpiName: 'Reach',
+        target: 200000,
+        weight: 30,
+        currentAverage: 245000,
+        status: 'Exceeding'
+      },
+      {
+        kpiName: 'Conversions',
+        target: 350,
+        weight: 30,
+        currentAverage: 280,
+        status: 'BelowTarget'
+      }
+    ],
+    approvedCreators: [
+      {
+        creatorId: uuidv4(),
+        name: 'CryptoCreator',
+        avatar: 'https://i.pravatar.cc/150?u=creator1',
+        reputation: 850,
+        payment: 3333,
+        deliverableStatus: 3,
+        cvpiContribution: 78.5
+      }
+    ]
+  }));
+});
+
+app.get('/api/project/campaigns/:id/analytics', (req, res) => {
+  res.json(apiResponse({
+    summary: {
+      totalSpend: 10762,
+      avgCVPI: 85.3,
+      kpiSuccessRate: 87,
+      avgCreatorReputation: 828
+    },
+    cvpiBreakdown: [
+      {
+        creatorName: 'Creator A',
+        cvpiScore: 78.5,
+        classification: 'Good'
+      },
+      {
+        creatorName: 'Creator B',
+        cvpiScore: 92.1,
+        classification: 'Good'
+      }
+    ],
+    kpiAchievement: [
+      {
+        date: '2024-12-01',
+        kpiName: 'Engagement Rate',
+        achievementPercentage: 109
+      },
+      {
+        date: '2024-12-08',
+        kpiName: 'Reach',
+        achievementPercentage: 123
+      }
+    ],
+    audienceReach: {
+      totalImpressions: 735000,
+      uniqueReach: 612000,
+      totalEngagements: 58300,
+      avgEngagementRate: 7.9
+    },
+    costEfficiency: {
+      costPer1KImpressions: 14.65,
+      costPerEngagement: 0.18,
+      costPerConversion: 26.25
+    }
+  }));
+});
+
+app.get('/api/project/campaigns/:id/financials', (req, res) => {
+  res.json(apiResponse({
+    escrowOverview: {
+      smartContractAddress: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      chain: 'BASE Mainnet',
+      totalLocked: 11922,
+      totalReleased: 3505,
+      remainingBalance: 8417,
+      expectedRefund: 1084
+    },
+    budgetAllocation: {
+      creatorPayments: 10000,
+      serviceFees: 768,
+      oracleFees: 70,
+      escrowBuffer: 1084,
+      unused: 500
+    },
+    paymentHistory: [
+      {
+        date: '2024-11-23T10:30:00Z',
+        type: 'CreatorPayment',
+        recipient: 'Creator A',
+        amount: 3333,
+        status: 'Completed',
+        transactionHash: '0x3f7a9e2b...'
+      },
+      {
+        date: '2024-11-23T10:31:00Z',
+        type: 'ServiceFee',
+        recipient: 'AW3 Platform',
+        amount: 256,
+        status: 'Completed',
+        transactionHash: '0x9c1d4f8a...'
+      }
+    ],
+    feeBreakdown: {
+      baseRate: 8,
+      complexityMultiplier: 1.5,
+      reputationDiscount: -20,
+      tokenPaymentDiscount: -20,
+      effectiveRate: 7.68,
+      totalSaved: 432
+    }
+  }));
+});
+
+// ============ PROJECT APPLICATIONS ENDPOINTS ============
+app.get('/api/project/applications', (req, res) => {
+  const applications = [
+    {
+      applicationId: uuidv4(),
+      campaignId: uuidv4(),
+      campaignName: 'DeFi Protocol Launch',
+      creatorId: uuidv4(),
+      creatorName: 'CryptoInfluencer',
+      creatorAvatar: 'https://i.pravatar.cc/150?u=creator1',
+      reputation: 850,
+      reputationTier: 'A',
+      avgCVPI: 68.5,
+      cvpiClassification: 'Excellent',
+      socialStats: [
+        { platform: 1, followers: 125000 },
+        { platform: 5, followers: 2300 }
+      ],
+      campaignsCompleted: 42,
+      successRate: 95,
+      applicationMessage: 'I have extensive experience promoting DeFi projects with proven track record...',
+      portfolioLinks: [
+        {
+          url: 'https://youtube.com/video1',
+          title: 'DeFi Explained',
+          description: 'Educational video about DeFi protocols'
+        }
+      ],
+      appliedAt: '2024-12-08T10:00:00Z',
+      status: 1,
+      matchScore: 92.5
+    },
+    {
+      applicationId: uuidv4(),
+      campaignId: uuidv4(),
+      campaignName: 'DeFi Protocol Launch',
+      creatorId: uuidv4(),
+      creatorName: 'BlockchainExpert',
+      creatorAvatar: 'https://i.pravatar.cc/150?u=creator2',
+      reputation: 780,
+      reputationTier: 'B',
+      avgCVPI: 75.2,
+      cvpiClassification: 'Good',
+      socialStats: [
+        { platform: 1, followers: 85000 }
+      ],
+      campaignsCompleted: 28,
+      successRate: 89,
+      applicationMessage: 'My audience is highly engaged with DeFi content...',
+      portfolioLinks: [],
+      appliedAt: '2024-12-07T15:30:00Z',
+      status: 1,
+      matchScore: 85.0
+    }
+  ];
+
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+
+  res.json(apiResponse({
+    applications,
+    pagination: {
+      currentPage: page,
+      totalPages: 3,
+      totalElements: 45,
+      pageSize: size
+    }
+  }));
+});
+
+app.get('/api/project/applications/:id', (req, res) => {
+  res.json(apiResponse({
+    applicationId: req.params.id,
+    campaignId: uuidv4(),
+    campaignName: 'DeFi Protocol Launch',
+    creatorId: uuidv4(),
+    creatorName: 'CryptoInfluencer',
+    creatorAvatar: 'https://i.pravatar.cc/150?u=creator1',
+    reputation: 850,
+    reputationTier: 'A',
+    avgCVPI: 68.5,
+    cvpiClassification: 'Excellent',
+    socialStats: [
+      { platform: 1, followers: 125000 },
+      { platform: 5, followers: 2300 }
+    ],
+    campaignsCompleted: 42,
+    successRate: 95,
+    applicationMessage: 'I have extensive experience promoting DeFi projects with proven track record of delivering high engagement rates and conversions.',
+    portfolioLinks: [
+      {
+        url: 'https://youtube.com/video1',
+        title: 'DeFi Explained',
+        description: 'Educational video about DeFi protocols'
+      }
+    ],
+    appliedAt: '2024-12-08T10:00:00Z',
+    status: 1,
+    matchScore: 92.5
+  }));
+});
+
+app.post('/api/project/applications/approve', (req, res) => {
+  const successCount = req.body.applicationIds.length;
+  res.json(apiResponse({
+    successCount,
+    failedIds: [],
+    errors: []
+  }));
+});
+
+app.post('/api/project/applications/reject', (req, res) => {
+  const successCount = req.body.applicationIds.length;
+  res.json(apiResponse({
+    successCount,
+    failedIds: [],
+    errors: []
+  }));
+});
+
+app.get('/api/project/applications/:id/deliverables', (req, res) => {
+  res.json(apiResponse({
+    deliverables: [
+      {
+        deliverableId: uuidv4(),
+        contentUrl: 'https://twitter.com/user/status/123',
+        deliverableType: 1,
+        platform: 1,
+        status: 3,
+        submittedAt: '2024-12-10T10:00:00Z'
+      }
+    ]
+  }));
+});
+
+// ============ PROJECT DELIVERABLES ENDPOINTS ============
+app.get('/api/project/deliverables', (req, res) => {
+  res.json(apiResponse({
+    deliverables: [
+      {
+        deliverableId: uuidv4(),
+        campaignId: uuidv4(),
+        creatorId: uuidv4(),
+        contentUrl: 'https://youtube.com/watch?v=abc123',
+        deliverableType: 2,
+        platform: 2,
+        status: 2,
+        metrics: {
+          views: 52000,
+          likes: 3200,
+          comments: 450,
+          shares: 280,
+          engagementRate: 7.5
+        },
+        cvpiScore: 88.5,
+        paymentAmount: 3333,
+        submittedAt: '2024-12-05T10:00:00Z',
+        verifiedAt: null
+      }
+    ]
+  }));
+});
+
+app.get('/api/project/deliverables/:id', (req, res) => {
+  res.json(apiResponse({
+    deliverableId: req.params.id,
+    campaignId: uuidv4(),
+    creatorId: uuidv4(),
+    creatorName: 'CryptoInfluencer',
+    contentUrl: 'https://youtube.com/watch?v=abc123',
+    deliverableType: 2,
+    platform: 2,
+    status: 2,
+    metrics: {
+      views: 52000,
+      likes: 3200,
+      comments: 450,
+      shares: 280,
+      engagementRate: 7.5
+    },
+    oracleVerification: {
+      status: 'Complete',
+      verifiedBy: 'Oracle Node #12',
+      verifiedAt: '2024-11-23T10:30:00Z'
+    },
+    kpiResults: [
+      {
+        kpi: 'Engagement Rate',
+        target: 7.5,
+        actual: 8.2,
+        achievement: 109,
+        status: 'Met'
+      },
+      {
+        kpi: 'Reach',
+        target: 200000,
+        actual: 245000,
+        achievement: 123,
+        status: 'Exceeded'
+      }
+    ],
+    cvpiScore: 88.5,
+    paymentAmount: 3333,
+    submittedAt: '2024-12-05T10:00:00Z',
+    verifiedAt: null
+  }));
+});
+
+app.post('/api/project/deliverables/:id/verify', (req, res) => {
+  res.json(apiResponse({
+    message: 'Payment release initiated',
+    transactionHash: '0x8a2f' + Math.random().toString(36).substring(2, 15),
+    amount: 3333
+  }));
+});
+
+app.post('/api/project/deliverables/:id/request-revision', (req, res) => {
+  res.json(apiResponse({
+    message: 'Revision requested',
+    feedback: req.body.feedback
+  }));
+});
+
+app.post('/api/project/deliverables/:id/reject', (req, res) => {
+  res.json(apiResponse({
+    message: 'Deliverable rejected',
+    reason: req.body.reason,
+    disputeInitiated: true
+  }));
+});
+
+// ============ PROJECT CREATORS ENDPOINTS ============
+app.get('/api/project/creators/discover', (req, res) => {
+  const creators = [
+    {
+      creatorId: uuidv4(),
+      displayName: 'CryptoInfluencer',
+      avatar: 'https://i.pravatar.cc/150?u=creator1',
+      reputation: 850,
+      reputationTier: 'A',
+      avgCVPI: 68.5,
+      cvpiClassification: 'Excellent',
+      socialStats: [
+        { platform: 1, followers: 125000 },
+        { platform: 2, followers: 85000 }
+      ],
+      campaignsCompleted: 42,
+      successRate: 95,
+      verticalExperience: [1, 2],
+      estimatedCVPI: 72.3,
+      available: true
+    },
+    {
+      creatorId: uuidv4(),
+      displayName: 'BlockchainGuru',
+      avatar: 'https://i.pravatar.cc/150?u=creator2',
+      reputation: 920,
+      reputationTier: 'S',
+      avgCVPI: 55.8,
+      cvpiClassification: 'Excellent',
+      socialStats: [
+        { platform: 1, followers: 250000 },
+        { platform: 2, followers: 150000 }
+      ],
+      campaignsCompleted: 78,
+      successRate: 97,
+      verticalExperience: [1, 4],
+      estimatedCVPI: 58.2,
+      available: true
+    }
+  ];
+
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 20;
+
+  res.json(apiResponse({
+    creators,
+    pagination: {
+      currentPage: page,
+      totalPages: 8,
+      totalElements: 142,
+      pageSize: size
+    }
+  }));
+});
+
+app.get('/api/project/creators/recommended', (req, res) => {
+  res.json(apiResponse({
+    creators: [
+      {
+        creatorId: uuidv4(),
+        displayName: 'RecommendedCreator',
+        avgCVPI: 62.5,
+        reputation: 880,
+        reason: 'Excellent performance in similar DeFi campaigns'
+      }
+    ]
+  }));
+});
+
+app.get('/api/project/creators/:id', (req, res) => {
+  res.json(apiResponse({
+    creatorId: req.params.id,
+    displayName: 'CryptoInfluencer',
+    avatar: 'https://i.pravatar.cc/150?u=creator1',
+    bio: 'Web3 content creator specializing in DeFi and NFT projects',
+    reputation: 850,
+    reputationTier: 'A',
+    avgCVPI: 68.5,
+    cvpiClassification: 'Excellent',
+    socialStats: [
+      { platform: 1, followers: 125000 },
+      { platform: 2, followers: 85000 }
+    ],
+    campaignsCompleted: 42,
+    successRate: 95,
+    verticalExperience: [1, 2],
+    available: true
+  }));
+});
+
+// ============ PROJECT ANALYTICS ENDPOINTS ============
+app.get('/api/project/analytics/overview', (req, res) => {
+  res.json(apiResponse({
+    totalSpend: 245000,
+    avgCVPI: 95.3,
+    campaignSuccessRate: 92,
+    totalReach: 2800000,
+    periodComparison: {
+      previousPeriod: 18,
+      platformAverage: 12,
+      verticalAverage: 8
+    }
+  }));
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json(apiError('NOT_FOUND', `Endpoint ${req.path} not found`));
