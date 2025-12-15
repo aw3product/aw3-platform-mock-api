@@ -4,7 +4,8 @@ info:
   description: |
     Backend API for AW3 Platform MVP - A Web3-native creator economy platform.
     
-    Authentication uses wallet-based authentication with JWT tokens. Users sign messages with their Web3 wallet.
+    Authentication is handled via Privy (email/social login or wallet) to issue platform access tokens. Wallet signing remains available for on-chain flows, but user login/session creation is managed by Privy.
+    
     
     User Roles: CREATOR, PROJECTOR, ADMIN, VALIDATOR
     
@@ -28,7 +29,7 @@ servers:
 
 tags:
   - name: Auth
-    description: Wallet-based authentication endpoints
+    description: AW3 authentication via Privy (email/social login or wallet); social verification is separate and not coupled to login
   - name: Creator Profile
     description: Creator profile management
   - name: Creator Campaigns
@@ -45,6 +46,8 @@ tags:
     description: Certificate and achievement management
   - name: Creator Settings
     description: User settings management
+  - name: Creator System
+    description: System-level reference data for creators (e.g., localization literals)
   - name: Dashboard
     description: Dashboard data endpoints
   - name: Filters
@@ -185,13 +188,13 @@ components:
       type: integer
       enum: [1, 2, 3, 4, 5, 6, 7, 8]
       description: |
-        Deliverable type enum:
+        Deliverable type enum (UI-aligned):
         1 = Twitter Posts
         2 = Videos
         3 = Articles
         4 = AMAs
         5 = Discord Management
-        6 = Community Growth
+        6 = Community Giveaways
         7 = Instagram Post
         8 = TikTok
       example: 2
@@ -212,9 +215,9 @@ components:
       type: integer
       enum: [1, 2, 3, 4, 5, 6]
       description: |
-        Campaign stage enum:
-        1 = Language
-        2 = Rate Configuration
+        Campaign stage enum (UI-aligned):
+        1 = Ideation
+        2 = Live Configuration
         3 = Notification Preferences
         4 = Privacy Controls
         5 = Wallet & Payout
@@ -544,6 +547,9 @@ components:
           format: uuid
         walletAddress:
           type: string
+        email:
+          type: string
+          format: email
         displayName:
           type: string
         avatar:
@@ -603,8 +609,6 @@ components:
           format: uuid
         title:
           type: string
-        focusArea:
-          $ref: '#/components/schemas/FocusArea'
         status:
           $ref: '#/components/schemas/CampaignStatus'
         budgetAmount:
@@ -623,15 +627,8 @@ components:
           format: date-time
         kpiTargets:
           type: object
-          description: KPI targets for match rate calculation
         requiredReputation:
           type: integer
-          description: Minimum reputation score required for match rate calculation
-        matchRate:
-          type: number
-          format: decimal
-          nullable: true
-          description: Calculated match rate percentage or null if not computable
         projectAvatar:
           type: string
           format: uri
@@ -689,9 +686,6 @@ components:
           type: object
         requiredReputation:
           type: integer
-        matchRate:
-          type: number
-          nullable: true
         projectInfo:
           type: object
           required:
@@ -1105,6 +1099,7 @@ components:
       required:
         - hourlyRate
         - currency
+        - selected
       properties:
         hourlyRate:
           type: number
@@ -1118,25 +1113,60 @@ components:
           example: "USDC"
         minimumBudget:
           type: number
+        selected:
+          type: string
+          enum: [hourly, daily, project]
+          description: Selected rate mode
 
     NotificationSettings:
       type: object
       required:
-        - emailNotifications
-        - pushNotifications
+        - email
+        - push
+        - frequency
       properties:
-        emailNotifications:
-          type: boolean
-        pushNotifications:
-          type: boolean
-        campaignUpdates:
-          type: boolean
-        applicationUpdates:
-          type: boolean
-        paymentNotifications:
-          type: boolean
-        marketingEmails:
-          type: boolean
+        email:
+          type: object
+          required:
+            - newCampaignMatches
+            - applicationStatusUpdates
+            - paymentReceived
+            - messagesFromClients
+            - communityInteractions
+            - platformAnnouncements
+          properties:
+            newCampaignMatches:
+              type: boolean
+            applicationStatusUpdates:
+              type: boolean
+            paymentReceived:
+              type: boolean
+            messagesFromClients:
+              type: boolean
+            communityInteractions:
+              type: boolean
+            platformAnnouncements:
+              type: boolean
+        push:
+          type: object
+          required:
+            - realTimeMessages
+            - campaignDeadlines
+            - paymentConfirmations
+            - milestoneReminders
+          properties:
+            realTimeMessages:
+              type: boolean
+            campaignDeadlines:
+              type: boolean
+            paymentConfirmations:
+              type: boolean
+            milestoneReminders:
+              type: boolean
+        frequency:
+          type: string
+          enum: [instant, daily_digest, weekly_summary]
+          description: Notification frequency preference
 
     PrivacySettings:
       type: object
@@ -2431,8 +2461,8 @@ paths:
   /auth/wallet-connect:
     post:
       tags: [Auth]
-      summary: Initiate wallet connection
-      description: Generate nonce for wallet signature
+      summary: Initiate Privy login (wallet path)
+      description: Generate nonce for wallet signature within a Privy-managed auth session. Privy provides platform authentication (email/social/wallet). Social verification is handled by an independent service and is not part of this flow.
       operationId: walletConnect
       requestBody:
         required: true
@@ -2456,8 +2486,8 @@ paths:
   /auth/verify-signature:
     post:
       tags: [Auth]
-      summary: Verify wallet signature
-      description: Verify signature and issue JWT tokens
+      summary: Verify wallet signature (Privy session)
+      description: Verify signature and issue JWT tokens for AW3 after Privy login. This endpoint is for platform access only; social account verification is separate and does not depend on Privy.
       operationId: verifySignature
       requestBody:
         required: true
@@ -2483,7 +2513,7 @@ paths:
       tags: [Auth]
       summary: Register new user (simplified flow)
       description: |
-        Simplified registration requiring only essential fields.
+        Simplified registration requiring only essential fields, assuming the user is already authenticated via Privy (email/social login or wallet).
         Optional profile fields should be completed later via profile update endpoint.
       operationId: register
       requestBody:
@@ -2606,7 +2636,7 @@ paths:
   /creator/profile/social-verification:
     post:
       tags: [Creator Profile]
-      summary: Verify social media account
+      summary: Verify social media account (independent service)
       operationId: verifySocialAccount
       security:
         - bearerAuth: []
@@ -2628,7 +2658,7 @@ paths:
                   type: string
       responses:
         '200':
-          description: Verification initiated
+          description: Verification initiated via the dedicated social verification backend, which performs its own OAuth with Twitter/Discord/Telegram and fetches metrics (followers, engagement) directly from platform APIs. This flow is decoupled from Privy authentication.
 
   # ============ CREATOR CAMPAIGNS ENDPOINTS ============
   /creator/campaigns:
@@ -2640,33 +2670,47 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: focusArea
+        - name: keyword
           in: query
-          description: Filter by focus area
+          description: Keyword search against campaign title/description
           schema:
-            $ref: '#/components/schemas/FocusArea'
-        - name: minBudget
+            type: string
+        - name: vertical
           in: query
+          description: Filter by vertical (multi-select). Uses FocusArea enum values [1-9] matching UI labels (DeFi, NFT, Gaming, Infrastructure, L2, DAO, Metaverse, Trading, Other).
           schema:
-            type: number
-        - name: maxBudget
+            type: array
+            items:
+              $ref: '#/components/schemas/FocusArea'
+            style: form
+            explode: true
+        - name: deliverables
           in: query
+          description: Filter by deliverable types (multi-select). Uses DeliverableType enum values [1-8].
           schema:
-            type: number
-        - name: deliverableType
-          in: query
-          description: Filter by deliverable type
-          schema:
-            $ref: '#/components/schemas/DeliverableType'
+            type: array
+            items:
+              $ref: '#/components/schemas/DeliverableType'
+            style: form
+            explode: true
         - name: duration
           in: query
-          description: Filter by campaign duration
+          description: Filter by campaign duration (multi-select). Uses CampaignDuration enum values [1-5].
           schema:
-            $ref: '#/components/schemas/CampaignDuration'
-        - name: complexity
+            type: array
+            items:
+              $ref: '#/components/schemas/CampaignDuration'
+            style: form
+            explode: true
+        - name: stage
           in: query
+          description: Filter by campaign stage (multi-select). Uses CampaignStage enum values [1-6].
           schema:
-            $ref: '#/components/schemas/Complexity'
+            type: array
+            items:
+              $ref: '#/components/schemas/CampaignStage'
+            style: form
+            explode: true
         - name: page
           in: query
           schema:
@@ -2834,39 +2878,6 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ApiResponse'
-    post:
-      tags: [Creator Deliverables]
-      summary: Submit deliverable
-      operationId: submitDeliverable
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DeliverableRequest'
-      responses:
-        '200':
-          description: Deliverable submitted
-
-  /creator/deliverables/{id}:
-    get:
-      tags: [Creator Deliverables]
-      summary: Get deliverable details
-      operationId: getCreatorDeliverable
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Deliverable details
 
   # ============ CREATOR EARNINGS ENDPOINTS ============
   /creator/earnings:
@@ -3039,6 +3050,58 @@ paths:
       responses:
         '200':
           description: Settings updated
+
+  /creator/system/localization:
+    get:
+      tags: [Creator System]
+      summary: Get localization literals (languages and timezones)
+      operationId: getCreatorLocalizationLiterals
+      responses:
+        '200':
+          description: Localization literals for language and timezone selection
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          languages:
+                            type: array
+                            items:
+                              type: object
+                              required: [code, label]
+                              properties:
+                                code:
+                                  type: string
+                                label:
+                                  type: string
+                            example:
+                              - code: en
+                                label: English
+                              - code: en-US
+                                label: English (United States)
+                              - code: zh-CN
+                                label: Chinese (Simplified, China)
+                              - code: zh-TW
+                                label: Chinese (Traditional, Taiwan)
+                              - code: ja-JP
+                                label: Japanese (Japan)
+                              - code: ko-KR
+                                label: Korean (South Korea)
+                          timezones:
+                            type: array
+                            items:
+                              type: string
+                            example:
+                              - America/New_York
+                              - Europe/London
+                              - Asia/Shanghai
+                              - Asia/Tokyo
+                              - Asia/Seoul
 
   /creator/settings/rate:
     get:
