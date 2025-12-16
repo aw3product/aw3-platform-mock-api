@@ -2241,8 +2241,14 @@ app.use((err, req, res, next) => {
   res.status(500).json(apiError('INTERNAL_ERROR', 'Internal server error'));
 });
 
-app.listen(PORT, () => {
-  console.log(`AW3 Platform Mock API running on port ${PORT}`);
-  console.log(`Swagger UI: http://localhost:${PORT}/docs`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+// Start server (for Railway, Render, local development)
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`AW3 Platform Mock API running on port ${PORT}`);
+    console.log(`Swagger UI: http://localhost:${PORT}/docs`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+  });
+}
+
+// Export for Vercel serverless
+module.exports = app;
