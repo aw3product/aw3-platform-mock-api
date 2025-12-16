@@ -29,7 +29,7 @@ info:
     - These are completely independent flows with no dependency between them
     
     ## User Roles
-    CREATOR, PROJECTOR, ADMIN, VALIDATOR
+    CREATOR, PROJECTOR, ADMIN
     
     ## Key Features
     - Privy-based platform authentication (email/social/wallet)
