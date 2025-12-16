@@ -359,22 +359,23 @@ components:
       type: object
       required:
         - success
-        - timestamp
       properties:
         success:
           type: boolean
+          example: true
         data:
           type: object
+          description: Response data (only present when success is true)
         error:
           type: object
+          description: Error details (only present when success is false)
           properties:
             code:
-              type: string
+              type: integer
+              example: 400
             message:
               type: string
-        timestamp:
-          type: string
-          format: date-time
+              example: "Error message"
 
     Pagination:
       type: object
@@ -1486,6 +1487,7 @@ components:
       type: object
       required:
         - name
+        - vertical
         - description
         - durationType
         - startDate
@@ -1501,21 +1503,27 @@ components:
           type: string
           maxLength: 100
           example: "DeFi Protocol Launch"
+        vertical:
+          $ref: '#/components/schemas/FocusArea'
         description:
           type: string
           maxLength: 2000
+          example: "string"
         durationType:
           $ref: '#/components/schemas/DurationType'
         startDate:
           type: string
           format: date
+          example: "2025-12-16"
         endDate:
           type: string
           format: date
           nullable: true
+          example: "2025-12-16"
         coverImage:
           type: string
           format: uri
+          example: "string"
         creatorBudget:
           type: number
           minimum: 500
@@ -1537,6 +1545,7 @@ components:
         contentGuidelines:
           type: string
           maxLength: 2000
+          example: "string"
         approvalMethod:
           $ref: '#/components/schemas/ApprovalMethod'
         kpiTargets:
@@ -1551,16 +1560,38 @@ components:
               metricType:
                 type: string
                 enum: [EngagementRate, Impressions, ClickThroughRate, Conversions, FollowerGrowth, Custom]
+                example: "EngagementRate"
               targetValue:
                 type: number
+                example: 0
               weight:
                 type: integer
                 minimum: 0
                 maximum: 100
+                example: 100
               verificationMethod:
                 type: string
                 enum: [Oracle, Manual, Hybrid]
                 default: Oracle
+                example: "Oracle"
+        previousExperience:
+          type: string
+          description: Required previous experience level for creators
+          enum: [Any, Beginner, Intermediate, Advanced, Expert]
+          example: "Any"
+        location:
+          type: array
+          description: Geographic focus - target regions/countries for the campaign
+          items:
+            type: string
+          example: ["North America", "Europe", "Asia"]
+        socials:
+          type: array
+          description: Required social platforms for creators
+          items:
+            type: string
+            enum: [Twitter, Discord, Telegram, YouTube, Instagram, TikTok]
+          example: ["Twitter", "Discord"]
         minReputationScore:
           type: integer
           minimum: 0
@@ -1572,9 +1603,11 @@ components:
             min:
               type: number
               default: 0
+              example: 0
             max:
               type: number
               default: 150
+              example: 150
 
     CampaignTransactionResponse:
       type: object
@@ -1602,46 +1635,79 @@ components:
       required:
         - campaignId
         - name
+        - vertical
         - status
         - budgetTotal
         - budgetRemaining
+        - applicationCount
+        - approvedCount
+        - deliverableCount
+        - daysRemaining
+        - progressStage
+        - createdAt
       properties:
         campaignId:
           type: string
           format: uuid
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
         name:
           type: string
+          example: "DeFi Protocol Launch"
+        vertical:
+          $ref: '#/components/schemas/FocusArea'
         status:
           $ref: '#/components/schemas/CampaignStatus'
         budgetTotal:
           type: number
+          description: Total campaign budget in USD
+          example: 10000
         budgetRemaining:
           type: number
+          description: Remaining budget in USD
+          example: 8000
         applicationCount:
           type: integer
+          description: Total number of applications received
+          example: 45
         approvedCount:
           type: integer
+          description: Number of approved applications
+          example: 3
         deliverableCount:
           type: integer
+          description: Number of deliverables submitted
+          example: 0
         daysRemaining:
           type: integer
+          description: Days remaining until campaign end date
           nullable: true
+          example: 12
         cvpiScore:
           type: number
+          description: Average CVPI score of approved creators
           nullable: true
+          example: 750
         cvpiClassification:
           type: string
+          description: CVPI classification category
           enum: [Excellent, Good, Average, Below Average, Poor]
+          nullable: true
+          example: "Excellent"
         progressStage:
           type: string
+          description: Current stage of the campaign workflow
           enum: [Applications, InProgress, Verification, Completed]
+          example: "Applications"
         createdAt:
           type: string
           format: date-time
+          example: "2025-12-16T03:47:18.818Z"
         endDate:
           type: string
           format: date-time
+          description: Campaign end date
           nullable: true
+          example: "2025-12-16T03:47:18.818Z"
 
     CampaignMetrics:
       type: object
@@ -1804,139 +1870,490 @@ components:
     CampaignAnalytics:
       type: object
       required:
-        - summary
+        - performanceSummary
         - cvpiBreakdown
-        - kpiAchievement
         - audienceReach
         - costEfficiency
       properties:
-        summary:
+        performanceSummary:
           type: object
+          description: Campaign performance overview
           properties:
             totalSpend:
               type: number
-            avgCVPI:
+              description: Total budget spent + fees
+              example: 10762
+            budgetTotal:
               type: number
+              description: Original campaign budget
+              example: 10000
+            fees:
+              type: number
+              description: Platform fees
+              example: 762
+            averageCvpi:
+              type: object
+              properties:
+                score:
+                  type: number
+                  example: 85.3
+                classification:
+                  type: string
+                  enum: [Excellent, Good, Average, Below Average, Poor]
+                  example: "Good"
+                benchmark:
+                  type: string
+                  description: Comparison to vertical average
+                  example: "Your vertical avg is 76.8"
+                performanceNote:
+                  type: string
+                  example: "Performance: 8.7% better"
             kpiSuccessRate:
-              type: number
-            avgCreatorReputation:
-              type: integer
+              type: object
+              properties:
+                total:
+                  type: integer
+                  description: Total KPI targets
+                  example: 3
+                exceeded:
+                  type: integer
+                  description: Number of targets exceeded
+                  example: 2
+                met:
+                  type: integer
+                  description: Number of targets met
+                  example: 1
+                missed:
+                  type: integer
+                  description: Number of targets missed
+                  example: 0
+                summary:
+                  type: string
+                  example: "2 of 3 deliverables exceeded targets, 1 met targets"
+            creatorPerformance:
+              type: object
+              properties:
+                reputation:
+                  type: integer
+                  example: 928
+                reputationTier:
+                  type: string
+                  example: "A Tier"
+                avgConversionTime:
+                  type: integer
+                  description: Average time to complete deliverable in days
+                  example: 23
+                onTimeDelivery:
+                  type: string
+                  example: "All deliverables submitted on time"
         cvpiBreakdown:
-          type: array
-          items:
-            type: object
-            properties:
-              creatorName:
-                type: string
-              cvpiScore:
-                type: number
-              classification:
-                type: string
-        kpiAchievement:
-          type: array
-          items:
-            type: object
-            properties:
-              date:
-                type: string
-                format: date
-              kpiName:
-                type: string
-              achievementPercentage:
-                type: number
+          type: object
+          description: CVPI breakdown by creators
+          properties:
+            chart:
+              type: array
+              description: Bar chart data for CVPI scores by creator
+              items:
+                type: object
+                properties:
+                  creatorName:
+                    type: string
+                    example: "Creator1"
+                  cvpiScore:
+                    type: number
+                    example: 92.5
+                  classification:
+                    type: string
+                    enum: [Excellent, Good, Average]
+                    example: "Excellent"
+                  percentageOfMaxCvpi:
+                    type: number
+                    description: Percentage relative to max CVPI (100)
+                    example: 92.5
+            timeline:
+              type: array
+              description: Line chart data showing CVPI progression over time
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                    example: "2025-12-01"
+                  excellent:
+                    type: number
+                    description: Percentage of excellent performers
+                    example: 75
+                  good:
+                    type: number
+                    description: Percentage of good performers
+                    example: 25
+            summary:
+              type: object
+              properties:
+                excellentCount:
+                  type: integer
+                  example: 8
+                goodCount:
+                  type: integer
+                  example: 4
+                averageCount:
+                  type: integer
+                  example: 1
         audienceReach:
           type: object
+          description: Audience reach and engagement analysis
           properties:
-            totalImpressions:
-              type: integer
-            uniqueReach:
-              type: integer
-            totalEngagements:
-              type: integer
-            avgEngagementRate:
-              type: number
+            platformBreakdown:
+              type: array
+              description: Reach by social platform
+              items:
+                type: object
+                properties:
+                  platform:
+                    type: string
+                    enum: [Twitter, Instagram, Discord, YouTube, Telegram, TikTok, Other]
+                    example: "Twitter"
+                  percentage:
+                    type: number
+                    description: Percentage of total reach
+                    example: 85
+                  impressions:
+                    type: integer
+                    example: 785000
+                  color:
+                    type: string
+                    description: Color for chart visualization
+                    example: "green"
+            totalMetrics:
+              type: object
+              properties:
+                totalImpressions:
+                  type: integer
+                  example: 750000
+                totalEngagements:
+                  type: integer
+                  example: 58300
+                uniqueReach:
+                  type: integer
+                  example: 612000
+                avgEngagementRate:
+                  type: number
+                  example: 7.9
         costEfficiency:
           type: object
+          description: Cost efficiency analysis with benchmarks
           properties:
-            costPer1KImpressions:
-              type: number
-            costPerEngagement:
-              type: number
-            costPerConversion:
-              type: number
+            metrics:
+              type: array
+              items:
+                type: object
+                properties:
+                  metricName:
+                    type: string
+                    enum: ["Cost per 1K Impressions", "Cost per Engagement", "Cost per Conversions"]
+                    example: "Cost per 1K Impressions"
+                  yourCampaign:
+                    type: number
+                    example: 14.65
+                  verticalAvg:
+                    type: number
+                    example: 18.20
+                  platformAvg:
+                    type: number
+                    example: 21.30
+                  performance:
+                    type: string
+                    description: Performance comparison
+                    example: "24% better"
+                  performancePercentage:
+                    type: number
+                    description: Numeric performance difference
+                    example: 24
+            summary:
+              type: object
+              properties:
+                overallEfficiency:
+                  type: string
+                  example: "25% more cost-efficient than platform average"
+                bestMetric:
+                  type: string
+                  example: "Cost per Engagement"
+                worstMetric:
+                  type: string
+                  example: "Cost per Conversions"
 
     CampaignFinancials:
       type: object
       required:
-        - escrowOverview
+        - analyticsOverview
+        - walletPortal
         - budgetAllocation
         - paymentHistory
         - feeBreakdown
+        - invoice
       properties:
-        escrowOverview:
+        analyticsOverview:
           type: object
+          description: Campaign performance summary for financials tab
           properties:
             smartContractAddress:
               type: string
+              description: Smart contract address managing escrow
+              example: "0x1234...5678"
             chain:
               type: string
-              example: "BASE Mainnet"
-            totalLocked:
+              example: "CHAIN: BASE Mainnet"
+            viewOnBlockchain:
+              type: string
+              format: uri
+              description: Link to view contract on blockchain explorer
+              example: "https://basescan.org/address/0x1234...5678"
+            totalImpressions:
+              type: integer
+              description: Total campaign impressions
+              example: 755000
+            totalEngagements:
+              type: integer
+              description: Total campaign engagements
+              example: 58300
+            uniqueReach:
+              type: integer
+              description: Unique reach count
+              example: 612000
+            avgEngagementRate:
               type: number
-            totalReleased:
+              description: Average engagement rate percentage
+              example: 7.9
+        walletPortal:
+          type: object
+          description: Budget allocation breakdown with percentages
+          properties:
+            creatorPayments:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 10000
+                percentage:
+                  type: number
+                  example: 80
+            serviceFees:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 768
+                percentage:
+                  type: number
+                  example: 6.1
+                note:
+                  type: string
+                  example: "8%"
+            oracleFees:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 70
+                percentage:
+                  type: number
+                  example: 0.6
+                note:
+                  type: string
+                  example: "~0%"
+            escrowBuffer:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 1084
+                percentage:
+                  type: number
+                  example: 8.7
+                note:
+                  type: string
+                  example: "10%"
+            unused:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  example: 500
+                percentage:
+                  type: number
+                  example: 4
+                note:
+                  type: string
+                  example: "Not refundable"
+            total:
               type: number
-            remainingBalance:
-              type: number
-            expectedRefund:
-              type: number
+              description: Total budget allocation
+              example: 12422
         budgetAllocation:
           type: object
+          description: Legacy budget allocation (kept for backward compatibility)
           properties:
             creatorPayments:
               type: number
+              example: 10000
             serviceFees:
               type: number
+              example: 768
             oracleFees:
               type: number
+              example: 70
             escrowBuffer:
               type: number
+              example: 1084
             unused:
               type: number
+              example: 500
         paymentHistory:
-          type: array
-          items:
-            type: object
-            properties:
-              date:
-                type: string
-                format: date-time
-              type:
-                type: string
-                enum: [CreatorPayment, ServiceFee, OracleFee, EscrowLock, BufferRefund]
-              recipient:
-                type: string
-              amount:
-                type: number
-              status:
-                type: string
-                enum: [Completed, Pending, Failed]
-              transactionHash:
-                type: string
-        feeBreakdown:
           type: object
           properties:
-            baseRate:
-              type: number
-            complexityMultiplier:
-              type: number
-            reputationDiscount:
-              type: number
-            tokenPaymentDiscount:
-              type: number
-            effectiveRate:
-              type: number
-            totalSaved:
-              type: number
+            transactions:
+              type: array
+              items:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                    example: "Nov 23"
+                  type:
+                    type: string
+                    enum: [Creator Payment, Service Fee, Oracle Fee, Escrow Lock, Buffer Refund]
+                    example: "Creator Payment"
+                  recipient:
+                    type: string
+                    example: "Creator A"
+                  amount:
+                    type: number
+                    example: 3333
+                  status:
+                    type: string
+                    enum: [Released, Distributed, Paid, Pending, Failed]
+                    example: "Released"
+                  transactionHash:
+                    type: string
+                    description: Blockchain transaction hash
+                    example: "tx hash"
+            pagination:
+              type: object
+              properties:
+                currentPage:
+                  type: integer
+                  example: 1
+                totalPages:
+                  type: integer
+                  example: 50
+                itemsPerPage:
+                  type: integer
+                  example: 10
+        feeBreakdown:
+          type: object
+          description: Detailed fee calculation breakdown
+          properties:
+            yourEffectiveFeeRate:
+              type: object
+              properties:
+                baseRate:
+                  type: object
+                  properties:
+                    value:
+                      type: number
+                      example: 8
+                    description:
+                      type: string
+                      example: "budget tier: $5k-$20k"
+                complexityMultiplier:
+                  type: object
+                  properties:
+                    value:
+                      type: number
+                      example: 1.5
+                    description:
+                      type: string
+                      example: "high complexity"
+                reputationDiscount:
+                  type: object
+                  properties:
+                    value:
+                      type: number
+                      example: -20
+                    description:
+                      type: string
+                      example: "Tier B"
+                tokenPaymentDiscount:
+                  type: object
+                  properties:
+                    value:
+                      type: number
+                      example: -20
+                    description:
+                      type: string
+                      example: "AW3 tokens used"
+                finalRate:
+                  type: number
+                  description: Final effective fee rate percentage
+                  example: 7.68
+            savings:
+              type: object
+              properties:
+                amountSaved:
+                  type: number
+                  example: 432
+                percentageSaved:
+                  type: number
+                  example: 36
+                comparisonNote:
+                  type: string
+                  example: "You saved $432 (36%) compared to standard rate thanks to your reputation and token payment"
+            detailedCalculation:
+              type: object
+              properties:
+                link:
+                  type: string
+                  example: "View detailed fee calculation"
+                description:
+                  type: string
+                  example: "For promotion and token payment eligibility"
+        invoice:
+          type: object
+          description: Invoice generation and download information
+          properties:
+            downloadUrl:
+              type: string
+              format: uri
+              description: URL to download invoice
+              example: "/api/invoices/campaign/{id}/download"
+            invoiceDetails:
+              type: object
+              properties:
+                campaignName:
+                  type: string
+                  example: "DeFi Protocol Launch"
+                dateRange:
+                  type: string
+                  example: "Start Date — End Date"
+                budgetAndFees:
+                  type: string
+                  example: "Budget and transaction fees"
+                paymentMethod:
+                  type: string
+                  example: "Crypto (AW3 Token)"
+                transactionHashes:
+                  type: array
+                  items:
+                    type: string
+                  description: List of related transaction hashes
+                downloadTaxDocuments:
+                  type: string
+                  example: "Download tax documents"
+                taxNote:
+                  type: string
+                  example: "Consult your tax advisor for guidance on reporting"
 
     CreatorDiscoveryResult:
       type: object
@@ -4053,24 +4470,63 @@ paths:
       security:
         - bearerAuth: []
       parameters:
+        - name: search
+          in: query
+          description: Search campaigns by name or description
+          schema:
+            type: string
         - name: status
           in: query
-          description: Filter by campaign status
+          description: Filter by campaign status (Active, Pending, Completed, Cancelled)
           schema:
             $ref: '#/components/schemas/CampaignStatus'
-        - name: focusArea
+        - name: vertical
           in: query
-          description: Filter by vertical
+          description: Filter by vertical (DeFi, NFT, Gaming, Infrastructure)
           schema:
             $ref: '#/components/schemas/FocusArea'
         - name: minBudget
           in: query
+          description: Minimum budget filter
           schema:
             type: number
+            example: 0
         - name: maxBudget
           in: query
+          description: Maximum budget filter
           schema:
             type: number
+            example: 10000
+        - name: minCvpi
+          in: query
+          description: Minimum CVPI score filter
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1000
+            example: 0
+        - name: maxCvpi
+          in: query
+          description: Maximum CVPI score filter
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1000
+            example: 1000
+        - name: startDate
+          in: query
+          description: Filter campaigns created after this date
+          schema:
+            type: string
+            format: date-time
+            example: "2024-01-01T00:00:00Z"
+        - name: endDate
+          in: query
+          description: Filter campaigns created before this date
+          schema:
+            type: string
+            format: date-time
+            example: "2024-12-31T23:59:59Z"
         - name: sort
           in: query
           description: Sort option
@@ -4078,14 +4534,18 @@ paths:
             $ref: '#/components/schemas/ProjectCampaignSort'
         - name: page
           in: query
+          description: Page number for pagination
           schema:
             type: integer
             default: 0
+            example: 0
         - name: size
           in: query
+          description: Number of items per page
           schema:
             type: integer
             default: 20
+            example: 20
       responses:
         '200':
           description: Campaign list
@@ -4192,11 +4652,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
-    delete:
+
+  /project/campaigns/{id}/cancel:
+    put:
       tags: [Project Campaigns]
-      summary: Delete draft campaign
-      description: Delete campaign only if in draft status. Cannot delete campaigns on-chain.
-      operationId: deleteProjectCampaign
+      summary: Cancel campaign
+      description: Cancel an active or pending campaign. Cancellation will stop the campaign and handle refunds if applicable.
+      operationId: cancelProjectCampaign
       security:
         - bearerAuth: []
       parameters:
@@ -4206,9 +4668,48 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Reason for cancellation
+                  maxLength: 500
+                  example: "Project timeline changed"
       responses:
         '200':
-          description: Campaign deleted
+          description: Campaign cancelled successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          campaignId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                            example: "Cancelled"
+                          cancelledAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Cannot cancel campaign (invalid status)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Campaign not found
           content:
             application/json:
               schema:
@@ -4230,7 +4731,7 @@ paths:
             type: string
             format: uuid
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -4238,18 +4739,81 @@ paths:
               properties:
                 reason:
                   type: string
+                  description: Reason for pausing the campaign
+                  example: "Need to review applications before proceeding"
       responses:
         '200':
-          description: Campaign paused
+          description: Campaign paused successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          campaignId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                            example: "Paused"
+                          pausedAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Bad request - Campaign cannot be paused
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "Campaign is not in active status"
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   /project/campaigns/{id}/resume:
     post:
       tags: [Project Campaigns]
       summary: Resume paused campaign
+      description: Resume a previously paused campaign to start accepting applications again
       operationId: resumeProjectCampaign
       security:
         - bearerAuth: []
@@ -4262,17 +4826,77 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Campaign resumed
+          description: Campaign resumed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          campaignId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                            example: "Active"
+                          resumedAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Bad request - Campaign cannot be resumed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "Campaign is not in paused status"
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   /project/campaigns/{id}/extend:
     post:
       tags: [Project Campaigns]
       summary: Extend campaign duration
-      description: Extend campaign end date
+      description: Extend campaign end date to allow more time for applications and deliverables
       operationId: extendProjectCampaign
       security:
         - bearerAuth: []
@@ -4295,18 +4919,88 @@ paths:
                 newEndDate:
                   type: string
                   format: date
+                  description: New end date for the campaign
+                  example: "2025-12-31"
+                reason:
+                  type: string
+                  description: Reason for extending the campaign
+                  example: "Need more time to review deliverables"
       responses:
         '200':
-          description: Campaign extended
+          description: Campaign extended successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          campaignId:
+                            type: string
+                            format: uuid
+                          previousEndDate:
+                            type: string
+                            format: date-time
+                          newEndDate:
+                            type: string
+                            format: date-time
+                          extendedAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Bad request - Invalid date or campaign cannot be extended
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "New end date must be after current end date"
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   /project/campaigns/{id}/invite:
     post:
       tags: [Project Campaigns]
       summary: Invite specific creators to campaign
+      description: Send direct invitations to selected creators for the campaign
       operationId: inviteCreatorsToCampaign
       security:
         - bearerAuth: []
@@ -4331,21 +5025,95 @@ paths:
                   items:
                     type: string
                     format: uuid
+                  minItems: 1
+                  example: ["123e4567-e89b-12d3-a456-426614174000", "223e4567-e89b-12d3-a456-426614174001"]
                 message:
                   type: string
+                  description: Custom message to include in the invitation
+                  maxLength: 500
+                  example: "We think you would be a great fit for this campaign!"
       responses:
         '200':
-          description: Invitations sent
+          description: Invitations sent successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          campaignId:
+                            type: string
+                            format: uuid
+                          invitedCount:
+                            type: integer
+                            example: 5
+                          invitedCreators:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                creatorId:
+                                  type: string
+                                  format: uuid
+                                status:
+                                  type: string
+                                  enum: [sent, failed]
+                                  example: "sent"
+        '400':
+          description: Bad request - Invalid creator IDs or campaign status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "Some creator IDs are invalid"
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   /project/campaigns/{id}/export:
     get:
       tags: [Project Campaigns]
       summary: Export campaign report
-      description: Generate and download campaign report in PDF or Excel format
+      description: Generate and download campaign report in PDF, Excel, or CSV format
       operationId: exportCampaignReport
       security:
         - bearerAuth: []
@@ -4359,12 +5127,14 @@ paths:
         - name: format
           in: query
           required: true
+          description: Export format
           schema:
             type: string
             enum: [PDF, EXCEL, CSV]
+            example: "PDF"
       responses:
         '200':
-          description: Report file
+          description: Report file generated successfully
           content:
             application/pdf:
               schema:
@@ -4374,6 +5144,52 @@ paths:
               schema:
                 type: string
                 format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request - Invalid format
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "Invalid export format"
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   /project/campaigns/{id}/metrics:
     get:
@@ -4426,12 +5242,176 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          campaign:
+                            type: object
+                            properties:
+                              campaignId:
+                                type: string
+                                format: uuid
+                              name:
+                                type: string
+                                example: "DeFi Protocol Launch"
+                              vertical:
+                                $ref: '#/components/schemas/FocusArea'
+                              description:
+                                type: string
+                              status:
+                                $ref: '#/components/schemas/CampaignStatus'
+                              budgetTotal:
+                                type: number
+                                example: 10000
+                              budgetRemaining:
+                                type: number
+                                example: 8000
+                              budgetSpent:
+                                type: number
+                                example: 2000
+                              startDate:
+                                type: string
+                                format: date-time
+                              endDate:
+                                type: string
+                                format: date-time
+                                nullable: true
+                              daysRemaining:
+                                type: integer
+                                nullable: true
+                                example: 12
+                              coverImage:
+                                type: string
+                                format: uri
+                                nullable: true
+                              contentGuidelines:
+                                type: string
+                              createdAt:
+                                type: string
+                                format: date-time
+                          kpiTargets:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                metricType:
+                                  type: string
+                                  enum: [EngagementRate, Impressions, ClickThroughRate, Conversions, FollowerGrowth, Custom]
+                                  example: "EngagementRate"
+                                targetValue:
+                                  type: number
+                                  example: 5.5
+                                currentValue:
+                                  type: number
+                                  example: 4.2
+                                  nullable: true
+                                weight:
+                                  type: integer
+                                  example: 100
+                                verificationMethod:
+                                  type: string
+                                  enum: [Oracle, Manual, Hybrid]
+                                  example: "Oracle"
+                                achievementPercentage:
+                                  type: number
+                                  nullable: true
+                                  example: 76.4
+                          approvedCreators:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                creatorId:
+                                  type: string
+                                  format: uuid
+                                displayName:
+                                  type: string
+                                  example: "CryptoInfluencer"
+                                profileImage:
+                                  type: string
+                                  format: uri
+                                  nullable: true
+                                cvpiScore:
+                                  type: number
+                                  example: 850
+                                reputationScore:
+                                  type: integer
+                                  example: 750
+                                approvedAt:
+                                  type: string
+                                  format: date-time
+                                deliverablesCompleted:
+                                  type: integer
+                                  example: 2
+                                deliverablesTotal:
+                                  type: integer
+                                  example: 3
+                                status:
+                                  type: string
+                                  enum: [InProgress, Completed, Pending]
+                                  example: "InProgress"
+                          statistics:
+                            type: object
+                            properties:
+                              totalApplications:
+                                type: integer
+                                example: 45
+                              approvedApplications:
+                                type: integer
+                                example: 3
+                              pendingApplications:
+                                type: integer
+                                example: 15
+                              rejectedApplications:
+                                type: integer
+                                example: 27
+                              totalDeliverables:
+                                type: integer
+                                example: 6
+                              completedDeliverables:
+                                type: integer
+                                example: 2
+                              averageCvpiScore:
+                                type: number
+                                nullable: true
+                                example: 820
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   /project/campaigns/{id}/analytics:
     get:
       tags: [Project Analytics]
-      summary: Get campaign analytics
-      description: Returns comprehensive analytics including CVPI breakdown, KPI achievement, audience reach, and cost efficiency
+      summary: Get comprehensive campaign analytics
+      description: |
+        Returns all campaign analytics data in one endpoint including:
+        - Campaign Performance Summary (spend, CVPI, KPI success rate, creator performance)
+        - CVPI Breakdown Chart (bar chart by creator and timeline progression)
+        - Audience Reach Analysis (platform breakdown, total metrics)
+        - Cost Efficiency Analysis (cost metrics with benchmarks)
       operationId: getCampaignAnalytics
       security:
         - bearerAuth: []
@@ -4439,12 +5419,13 @@ paths:
         - name: id
           in: path
           required: true
+          description: Campaign ID
           schema:
             type: string
             format: uuid
       responses:
         '200':
-          description: Campaign analytics
+          description: Comprehensive campaign analytics
           content:
             application/json:
               schema:
@@ -4452,14 +5433,44 @@ paths:
                   - $ref: '#/components/schemas/ApiResponse'
                   - type: object
                     properties:
+                      success:
+                        type: boolean
+                        example: true
                       data:
                         $ref: '#/components/schemas/CampaignAnalytics'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   /project/campaigns/{id}/financials:
     get:
       tags: [Project Finance]
-      summary: Get campaign financial details
-      description: Returns escrow overview, budget allocation, payment history, and fee breakdown
+      summary: Get comprehensive campaign financial details
+      description: |
+        Returns complete financial information including:
+        - Analytics Overview (smart contract, impressions, engagements, reach)
+        - Wallet Portal / Budget Allocation (creator payments, fees, buffer, unused funds with percentages)
+        - Payment History (transactions with pagination)
+        - Fee Breakdown (detailed calculation with discounts and savings)
+        - Invoice (download links and tax documents)
       operationId: getCampaignFinancials
       security:
         - bearerAuth: []
@@ -4467,12 +5478,13 @@ paths:
         - name: id
           in: path
           required: true
+          description: Campaign ID
           schema:
             type: string
             format: uuid
       responses:
         '200':
-          description: Campaign financials
+          description: Complete campaign financials
           content:
             application/json:
               schema:
@@ -4480,8 +5492,32 @@ paths:
                   - $ref: '#/components/schemas/ApiResponse'
                   - type: object
                     properties:
+                      success:
+                        type: boolean
+                        example: true
                       data:
                         $ref: '#/components/schemas/CampaignFinancials'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Campaign not found"
 
   # ============ PROJECT APPLICATIONS ENDPOINTS ============
   /project/applications:
@@ -4516,8 +5552,12 @@ paths:
             default: DESC
         - name: minReputation
           in: query
+          description: Filter by minimum reputation score (reserved for future feature)
           schema:
             type: integer
+            minimum: 0
+            maximum: 1000
+            example: 600
         - name: page
           in: query
           schema:
@@ -4638,6 +5678,7 @@ paths:
     get:
       tags: [Project Deliverables]
       summary: Get deliverables for specific application
+      description: Returns all deliverables submitted by a creator for a specific application
       operationId: getApplicationDeliverables
       security:
         - bearerAuth: []
@@ -4645,6 +5686,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: Application ID
           schema:
             type: string
             format: uuid
@@ -4656,6 +5698,103 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          applicationId:
+                            type: string
+                            format: uuid
+                          campaignId:
+                            type: string
+                            format: uuid
+                          creatorId:
+                            type: string
+                            format: uuid
+                          deliverables:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                deliverableId:
+                                  type: string
+                                  format: uuid
+                                deliverableType:
+                                  $ref: '#/components/schemas/DeliverableType'
+                                title:
+                                  type: string
+                                  example: "Twitter Thread about DeFi Protocol"
+                                description:
+                                  type: string
+                                  nullable: true
+                                contentUrl:
+                                  type: string
+                                  format: uri
+                                  example: "https://twitter.com/creator/status/123456"
+                                submittedAt:
+                                  type: string
+                                  format: date-time
+                                status:
+                                  type: string
+                                  enum: [Pending, Approved, Rejected, Revision]
+                                  example: "Pending"
+                                metrics:
+                                  type: object
+                                  nullable: true
+                                  properties:
+                                    impressions:
+                                      type: integer
+                                      example: 15000
+                                    engagements:
+                                      type: integer
+                                      example: 850
+                                    clicks:
+                                      type: integer
+                                      example: 320
+                                    engagementRate:
+                                      type: number
+                                      example: 5.67
+                                reviewedAt:
+                                  type: string
+                                  format: date-time
+                                  nullable: true
+                                reviewerNotes:
+                                  type: string
+                                  nullable: true
+                                paymentAmount:
+                                  type: number
+                                  nullable: true
+                                  example: 500
+                                paymentStatus:
+                                  type: string
+                                  enum: [Pending, Processing, Completed, Failed]
+                                  nullable: true
+                                  example: "Pending"
+        '404':
+          description: Application not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Application not found"
 
   # ============ PROJECT DELIVERABLES ENDPOINTS ============
   /project/deliverables:
@@ -4669,21 +5808,29 @@ paths:
       parameters:
         - name: campaignId
           in: query
+          description: Filter by campaign ID
           schema:
             type: string
             format: uuid
         - name: status
           in: query
+          description: Filter by deliverable status
           schema:
             $ref: '#/components/schemas/DeliverableStatus'
         - name: page
           in: query
+          description: Page number for pagination
           schema:
             type: integer
+            default: 0
+            example: 0
         - name: size
           in: query
+          description: Number of items per page
           schema:
             type: integer
+            default: 20
+            example: 20
       responses:
         '200':
           description: Deliverables list
@@ -4692,11 +5839,74 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          deliverables:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                deliverableId:
+                                  type: string
+                                  format: uuid
+                                campaignId:
+                                  type: string
+                                  format: uuid
+                                campaignName:
+                                  type: string
+                                  example: "DeFi Protocol Launch"
+                                applicationId:
+                                  type: string
+                                  format: uuid
+                                creatorId:
+                                  type: string
+                                  format: uuid
+                                creatorName:
+                                  type: string
+                                  example: "CryptoInfluencer"
+                                creatorAvatar:
+                                  type: string
+                                  format: uri
+                                  nullable: true
+                                deliverableType:
+                                  $ref: '#/components/schemas/DeliverableType'
+                                title:
+                                  type: string
+                                  example: "Twitter Thread about DeFi Protocol"
+                                contentUrl:
+                                  type: string
+                                  format: uri
+                                submittedAt:
+                                  type: string
+                                  format: date-time
+                                status:
+                                  type: string
+                                  enum: [Pending, Approved, Rejected, Revision]
+                                  example: "Pending"
+                                metrics:
+                                  type: object
+                                  nullable: true
+                                  properties:
+                                    impressions:
+                                      type: integer
+                                    engagements:
+                                      type: integer
+                                    engagementRate:
+                                      type: number
+                          pagination:
+                            $ref: '#/components/schemas/Pagination'
 
   /project/deliverables/{id}:
     get:
       tags: [Project Deliverables]
       summary: Get deliverable details
+      description: Get detailed information about a specific deliverable including metrics and verification results
       operationId: getProjectDeliverable
       security:
         - bearerAuth: []
@@ -4704,6 +5914,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: Deliverable ID
           schema:
             type: string
             format: uuid
@@ -4715,6 +5926,139 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          deliverableId:
+                            type: string
+                            format: uuid
+                          campaignId:
+                            type: string
+                            format: uuid
+                          campaignName:
+                            type: string
+                            example: "DeFi Protocol Launch"
+                          applicationId:
+                            type: string
+                            format: uuid
+                          creatorId:
+                            type: string
+                            format: uuid
+                          creatorName:
+                            type: string
+                            example: "CryptoInfluencer"
+                          creatorAvatar:
+                            type: string
+                            format: uri
+                            nullable: true
+                          deliverableType:
+                            $ref: '#/components/schemas/DeliverableType'
+                          title:
+                            type: string
+                            example: "Twitter Thread about DeFi Protocol"
+                          description:
+                            type: string
+                            nullable: true
+                          contentUrl:
+                            type: string
+                            format: uri
+                            example: "https://twitter.com/creator/status/123456"
+                          attachments:
+                            type: array
+                            items:
+                              type: string
+                              format: uri
+                          submittedAt:
+                            type: string
+                            format: date-time
+                          status:
+                            type: string
+                            enum: [Pending, Approved, Rejected, Revision]
+                            example: "Pending"
+                          metrics:
+                            type: object
+                            nullable: true
+                            properties:
+                              impressions:
+                                type: integer
+                                example: 15000
+                              engagements:
+                                type: integer
+                                example: 850
+                              clicks:
+                                type: integer
+                                example: 320
+                              engagementRate:
+                                type: number
+                                example: 5.67
+                              verifiedByOracle:
+                                type: boolean
+                                example: true
+                              oracleTimestamp:
+                                type: string
+                                format: date-time
+                                nullable: true
+                          reviewedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          reviewedBy:
+                            type: string
+                            nullable: true
+                          reviewerNotes:
+                            type: string
+                            nullable: true
+                          revisionHistory:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                timestamp:
+                                  type: string
+                                  format: date-time
+                                action:
+                                  type: string
+                                  example: "Revision Requested"
+                                feedback:
+                                  type: string
+                          paymentAmount:
+                            type: number
+                            nullable: true
+                            example: 500
+                          paymentStatus:
+                            type: string
+                            enum: [Pending, Processing, Completed, Failed]
+                            nullable: true
+                            example: "Pending"
+                          transactionHash:
+                            type: string
+                            nullable: true
+        '404':
+          description: Deliverable not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Deliverable not found"
 
   /project/deliverables/{id}/verify:
     post:
@@ -4728,9 +6072,21 @@ paths:
         - name: id
           in: path
           required: true
+          description: Deliverable ID
           schema:
             type: string
             format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Optional approval notes
+                  example: "Great work! Exceeded expectations."
       responses:
         '200':
           description: Payment release initiated
@@ -4739,11 +6095,81 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          deliverableId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                            example: "Approved"
+                          paymentAmount:
+                            type: number
+                            example: 500
+                          paymentStatus:
+                            type: string
+                            example: "Processing"
+                          transactionHash:
+                            type: string
+                            example: "0x1234..."
+                            nullable: true
+                          verifiedAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Bad request - Cannot verify deliverable
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "Deliverable is not in pending status"
+        '404':
+          description: Deliverable not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Deliverable not found"
 
   /project/deliverables/{id}/request-revision:
     post:
       tags: [Project Deliverables]
       summary: Request revision
+      description: Request changes to the deliverable with specific feedback
       operationId: requestDeliverableRevision
       security:
         - bearerAuth: []
@@ -4751,6 +6177,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: Deliverable ID
           schema:
             type: string
             format: uuid
@@ -4765,19 +6192,85 @@ paths:
               properties:
                 feedback:
                   type: string
+                  description: Detailed feedback on what needs to be revised
+                  maxLength: 1000
+                  example: "Please update the content to include more details about the tokenomics."
       responses:
         '200':
           description: Revision requested
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          deliverableId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                            example: "Revision"
+                          feedback:
+                            type: string
+                            example: "Please update the content to include more details about the tokenomics."
+                          requestedAt:
+                            type: string
+                            format: date-time
+        '400':
+          description: Bad request - Cannot request revision
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "Deliverable is not in pending status"
+        '404':
+          description: Deliverable not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Deliverable not found"
 
   /project/deliverables/{id}/reject:
     post:
       tags: [Project Deliverables]
       summary: Reject deliverable
-      description: Reject deliverable with reason (may trigger dispute)
+      description: Reject deliverable with reason (may trigger dispute resolution process)
       operationId: rejectDeliverable
       security:
         - bearerAuth: []
@@ -4785,6 +6278,7 @@ paths:
         - name: id
           in: path
           required: true
+          description: Deliverable ID
           schema:
             type: string
             format: uuid
@@ -4799,74 +6293,12 @@ paths:
               properties:
                 reason:
                   type: string
+                  description: Detailed reason for rejection
+                  maxLength: 1000
+                  example: "Content does not meet campaign guidelines and quality standards."
       responses:
         '200':
           description: Deliverable rejected
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-
-  # ============ PROJECT CREATORS ENDPOINTS ============
-  /project/creators/discover:
-    get:
-      tags: [Project Creators]
-      summary: Discover creators
-      description: Search and filter creators based on criteria with CVPI-focused results
-      operationId: discoverCreators
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: minReputation
-          in: query
-          schema:
-            type: integer
-        - name: maxReputation
-          in: query
-          schema:
-            type: integer
-        - name: minCVPI
-          in: query
-          schema:
-            type: number
-        - name: maxCVPI
-          in: query
-          schema:
-            type: number
-        - name: platform
-          in: query
-          schema:
-            $ref: '#/components/schemas/SocialPlatform'
-        - name: minFollowers
-          in: query
-          schema:
-            type: integer
-        - name: focusArea
-          in: query
-          schema:
-            $ref: '#/components/schemas/FocusArea'
-        - name: availableOnly
-          in: query
-          schema:
-            type: boolean
-            default: false
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum: [BestCVPI, HighestReputation, MostFollowers, MostCampaigns]
-            default: BestCVPI
-        - name: page
-          in: query
-          schema:
-            type: integer
-        - name: size
-          in: query
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Creators list
           content:
             application/json:
               schema:
@@ -4874,44 +6306,255 @@ paths:
                   - $ref: '#/components/schemas/ApiResponse'
                   - type: object
                     properties:
+                      success:
+                        type: boolean
+                        example: true
                       data:
                         type: object
                         properties:
+                          deliverableId:
+                            type: string
+                            format: uuid
+                          status:
+                            type: string
+                            example: "Rejected"
+                          reason:
+                            type: string
+                            example: "Content does not meet campaign guidelines and quality standards."
+                          rejectedAt:
+                            type: string
+                            format: date-time
+                          disputeEligible:
+                            type: boolean
+                            description: Whether creator can initiate dispute
+                            example: true
+        '400':
+          description: Bad request - Cannot reject deliverable
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 400
+                          message:
+                            type: string
+                            example: "Deliverable is not in pending status"
+        '404':
+          description: Deliverable not found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: false
+                      error:
+                        type: object
+                        properties:
+                          code:
+                            type: integer
+                            example: 404
+                          message:
+                            type: string
+                            example: "Deliverable not found"
+
+  # ============ PROJECT CREATORS ENDPOINTS ============
+  /project/creators/discover:
+    get:
+      tags: [Project Creators]
+      summary: Discover and filter creators
+      description: |
+        Unified endpoint for creator discovery with multiple views:
+        - **Recommended**: AI-recommended creators based on project history
+        - **All Creators**: All available creators with filters
+        - **Favorites**: Bookmarked/favorited creators
+        - **Engaged**: Previously engaged/hired creators
+        
+        Supports comprehensive filtering by reputation, CVPI, platform, vertical, and availability.
+      operationId: discoverCreators
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tab
+          in: query
+          description: View/tab filter for creator list
+          schema:
+            type: string
+            enum: [recommended, all, favorites, engaged]
+            default: all
+            example: "recommended"
+        - name: search
+          in: query
+          description: Search creators by name or username
+          schema:
+            type: string
+            example: "CryptoInfluencer"
+        - name: campaignId
+          in: query
+          description: Get recommendations for specific campaign (used with tab=recommended)
+          schema:
+            type: string
+            format: uuid
+        - name: minReputation
+          in: query
+          description: Minimum reputation score filter
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000
+            example: 0
+        - name: maxReputation
+          in: query
+          description: Maximum reputation score filter
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 1000
+            example: 1000
+        - name: reputationTier
+          in: query
+          description: Filter by reputation tier
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [S-Tier, A-Tier, B-Tier, All]
+            example: ["S-Tier", "A-Tier"]
+        - name: minCVPI
+          in: query
+          description: Minimum CVPI score filter
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1000
+            example: 0
+        - name: maxCVPI
+          in: query
+          description: Maximum CVPI score filter
+          schema:
+            type: number
+            minimum: 0
+            maximum: 1000
+            example: 500
+        - name: cvpiTier
+          in: query
+          description: Filter by CVPI tier
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [S-Tier, A-Tier, B-Tier, All]
+            example: ["S-Tier"]
+        - name: platform
+          in: query
+          description: Filter by social platform
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/SocialPlatform'
+            example: [1, 2]
+        - name: minFollowers
+          in: query
+          description: Minimum follower count
+          schema:
+            type: integer
+            example: 1000
+        - name: vertical
+          in: query
+          description: Filter by vertical experience
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/FocusArea'
+            example: [1, 3]
+        - name: availableOnly
+          in: query
+          description: Show only creators available for new campaigns
+          schema:
+            type: boolean
+            default: false
+            example: true
+        - name: sort
+          in: query
+          description: Sort option
+          schema:
+            type: string
+            enum: [BestCVPI, HighestReputation, MostFollowers, MostCampaigns, RecentlyActive]
+            default: BestCVPI
+            example: "BestCVPI"
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 0
+            example: 0
+        - name: size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: Creators list with filters applied
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      data:
+                        type: object
+                        properties:
+                          tab:
+                            type: string
+                            description: Current active tab
+                            example: "recommended"
                           creators:
                             type: array
                             items:
                               $ref: '#/components/schemas/CreatorDiscoveryResult'
                           pagination:
                             $ref: '#/components/schemas/Pagination'
-
-  /project/creators/recommended:
-    get:
-      tags: [Project Creators]
-      summary: Get recommended creators
-      description: AI-recommended creators based on project campaign history and preferences
-      operationId: getRecommendedCreators
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: campaignId
-          in: query
-          description: Get recommendations for specific campaign
-          schema:
-            type: string
-            format: uuid
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: Recommended creators
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
+                          appliedFilters:
+                            type: object
+                            description: Summary of applied filters
+                            properties:
+                              reputationRange:
+                                type: string
+                                example: "0-1000"
+                              cvpiRange:
+                                type: string
+                                example: "0-500"
+                              platforms:
+                                type: array
+                                items:
+                                  type: string
+                              verticals:
+                                type: array
+                                items:
+                                  type: string
+                              availableOnly:
+                                type: boolean
 
   /project/creators/{id}:
     get:
