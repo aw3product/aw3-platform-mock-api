@@ -4,13 +4,36 @@ info:
   description: |
     Backend API for AW3 Platform MVP - A Web3-native creator economy platform.
     
-    Authentication is handled via Privy (email/social login or wallet) to issue platform access tokens. Wallet signing remains available for on-chain flows, but user login/session creation is managed by Privy.
+    ## Authentication Architecture
     
+    **IMPORTANT: Two Separate Authentication Systems**
     
-    User Roles: CREATOR, PROJECTOR, ADMIN, VALIDATOR
+    ### 1. Platform Authentication (Privy)
+    - **Purpose:** User login to access AW3 platform
+    - **Provider:** Privy
+    - **Methods:** Gmail, Twitter (via Privy social login), Wallet (MetaMask, WalletConnect, etc.)
+    - **Result:** JWT tokens for AW3 API access
+    - **Endpoints:** `/auth/*`
     
-    Key Features:
-    - Wallet-based DID authentication
+    ### 2. Social Verification (Independent Service)
+    - **Purpose:** Verify social accounts and fetch metrics for campaigns
+    - **Provider:** Independent backend service (NOT Privy)
+    - **Platforms:** Twitter, Discord, Telegram, Instagram, YouTube
+    - **Process:** Own OAuth 2.0 implementation to each platform
+    - **Result:** Verified social accounts with follower counts and engagement metrics
+    - **Endpoints:** `/creator/profile/social-verification`, `/social/*`
+    
+    **Key Distinction:**
+    - A user can log into AW3 with Gmail but verify their Twitter account for metrics
+    - A user can log into AW3 with Twitter (via Privy) but STILL needs separate Twitter verification for social metrics
+    - These are completely independent flows with no dependency between them
+    
+    ## User Roles
+    CREATOR, PROJECTOR, ADMIN, VALIDATOR
+    
+    ## Key Features
+    - Privy-based platform authentication (email/social/wallet)
+    - Independent social verification service with OAuth implementation
     - Campaign management with escrow
     - CVPI (Creator Value Performance Index) scoring with integrated reputation
     - Certificate and achievement system
@@ -29,7 +52,20 @@ servers:
 
 tags:
   - name: Auth
-    description: AW3 authentication via Privy (email/social login or wallet); social verification is separate and not coupled to login
+    description: |
+      AW3 Platform Authentication via Privy
+      
+      **Important Architecture Note:**
+      - **Privy** is used ONLY for AW3 platform authentication (user login to access AW3)
+      - Supports Gmail, Twitter social login (via Privy), and Wallet-based authentication
+      - Issues JWT tokens for AW3 platform access
+      
+      **Social Verification is COMPLETELY SEPARATE:**
+      - Social verification is handled by an independent backend service
+      - NOT part of Privy authentication flow
+      - Has its own OAuth implementation to Twitter/Discord/Telegram
+      - Fetches social metrics (followers, engagement) directly from platform APIs
+      - No dependency between Privy authentication and social verification
   - name: Creator Profile
     description: Creator profile management
   - name: Creator Campaigns
@@ -663,8 +699,6 @@ components:
         objective:
           type: string
           description: Explicit campaign objective description
-        focusArea:
-          $ref: '#/components/schemas/FocusArea'
         status:
           $ref: '#/components/schemas/CampaignStatus'
         budgetAmount:
@@ -1120,6 +1154,7 @@ components:
 
     NotificationSettings:
       type: object
+      description: Notification preferences for email and push notifications
       required:
         - email
         - push
@@ -1127,6 +1162,7 @@ components:
       properties:
         email:
           type: object
+          description: Email notification preferences
           required:
             - newCampaignMatches
             - applicationStatusUpdates
@@ -1137,18 +1173,31 @@ components:
           properties:
             newCampaignMatches:
               type: boolean
+              description: Notify when new campaigns match your profile
+              example: true
             applicationStatusUpdates:
               type: boolean
+              description: Notify when application status changes
+              example: false
             paymentReceived:
               type: boolean
+              description: Notify when payment is received
+              example: true
             messagesFromClients:
               type: boolean
+              description: Notify when receiving messages from project owners
+              example: true
             communityInteractions:
               type: boolean
+              description: Notify about community interactions and mentions
+              example: false
             platformAnnouncements:
               type: boolean
+              description: Notify about platform updates and announcements
+              example: false
         push:
           type: object
+          description: Push notification preferences
           required:
             - realTimeMessages
             - campaignDeadlines
@@ -1157,41 +1206,86 @@ components:
           properties:
             realTimeMessages:
               type: boolean
+              description: Push notifications for real-time messages
+              example: true
             campaignDeadlines:
               type: boolean
+              description: Push notifications for upcoming campaign deadlines
+              example: true
             paymentConfirmations:
               type: boolean
+              description: Push notifications for payment confirmations
+              example: false
             milestoneReminders:
               type: boolean
+              description: Push notifications for milestone reminders
+              example: false
         frequency:
           type: string
           enum: [instant, daily_digest, weekly_summary]
-          description: Notification frequency preference
+          description: |
+            Notification frequency preference:
+            - instant: Receive notifications immediately as they occur
+            - daily_digest: Receive a daily summary of notifications
+            - weekly_summary: Receive a weekly summary of notifications
+          example: instant
 
     PrivacySettings:
       type: object
+      description: Privacy settings for profile visibility and information sharing
       required:
         - profileVisibility
       properties:
         profileVisibility:
           type: string
           enum: [PUBLIC, PRIVATE, CONNECTIONS_ONLY]
+          description: |
+            Profile visibility level:
+            - PUBLIC: Profile visible to everyone
+            - PRIVATE: Profile only visible to you
+            - CONNECTIONS_ONLY: Profile visible only to connected users
+          example: PUBLIC
         showEarnings:
           type: boolean
+          description: Display total earnings on public profile
+          example: false
+          default: false
         showCompletedCampaigns:
           type: boolean
+          description: Display number of completed campaigns on public profile
+          example: true
+          default: true
         showSocialAccounts:
           type: boolean
+          description: Display verified social accounts on public profile
+          example: true
+          default: true
 
     SecuritySettings:
       type: object
+      description: |
+        **DEPRECATED: Security settings are managed by Privy.**
+        
+        Wallet and security features including 2FA, login alerts, and trusted devices
+        are handled by Privy's authentication system.
+      deprecated: true
       properties:
+        message:
+          type: string
+          description: Information message about Privy management
+          example: Security settings are managed by Privy. Please use Privy dashboard for security configuration.
         twoFactorEnabled:
           type: boolean
+          description: Two-factor authentication status (managed by Privy)
+          deprecated: true
         loginAlerts:
           type: boolean
+          description: Login alert notifications (managed by Privy)
+          deprecated: true
         trustedDevices:
           type: array
+          description: List of trusted devices (managed by Privy)
+          deprecated: true
           items:
             type: object
             properties:
@@ -1392,7 +1486,6 @@ components:
       type: object
       required:
         - name
-        - focusArea
         - description
         - durationType
         - startDate
@@ -1408,8 +1501,6 @@ components:
           type: string
           maxLength: 100
           example: "DeFi Protocol Launch"
-        focusArea:
-          $ref: '#/components/schemas/FocusArea'
         description:
           type: string
           maxLength: 2000
@@ -1511,7 +1602,6 @@ components:
       required:
         - campaignId
         - name
-        - focusArea
         - status
         - budgetTotal
         - budgetRemaining
@@ -1521,8 +1611,6 @@ components:
           format: uuid
         name:
           type: string
-        focusArea:
-          $ref: '#/components/schemas/FocusArea'
         status:
           $ref: '#/components/schemas/CampaignStatus'
         budgetTotal:
@@ -2461,8 +2549,21 @@ paths:
   /auth/wallet-connect:
     post:
       tags: [Auth]
-      summary: Initiate Privy login (wallet path)
-      description: Generate nonce for wallet signature within a Privy-managed auth session. Privy provides platform authentication (email/social/wallet). Social verification is handled by an independent service and is not part of this flow.
+      summary: Initiate AW3 platform login via Privy (wallet authentication)
+      description: |
+        **Purpose:** Authenticate user to AW3 platform using wallet signature through Privy.
+        
+        **Authentication Flow:**
+        1. User connects wallet (MetaMask, WalletConnect, etc.)
+        2. System generates a nonce for signature
+        3. User signs nonce with their wallet
+        4. Backend verifies signature via `/auth/verify-signature`
+        5. JWT tokens issued for AW3 platform access
+        
+        **This is NOT for social verification:**
+        - This endpoint only handles AW3 platform authentication
+        - Social account verification (Twitter, Discord, Telegram) is handled by a completely separate service
+        - See `/creator/profile/social-verification` and `/social/*` endpoints for social verification
       operationId: walletConnect
       requestBody:
         required: true
@@ -2486,8 +2587,22 @@ paths:
   /auth/verify-signature:
     post:
       tags: [Auth]
-      summary: Verify wallet signature (Privy session)
-      description: Verify signature and issue JWT tokens for AW3 after Privy login. This endpoint is for platform access only; social account verification is separate and does not depend on Privy.
+      summary: Verify wallet signature and issue AW3 platform access tokens
+      description: |
+        **Purpose:** Complete wallet-based authentication to AW3 platform via Privy.
+        
+        **What this does:**
+        - Verifies the wallet signature against the nonce from `/auth/wallet-connect`
+        - Issues JWT access token and refresh token for AW3 platform
+        - Creates or updates user session
+        
+        **What this does NOT do:**
+        - Does NOT verify social media accounts (Twitter, Discord, Telegram)
+        - Does NOT fetch social metrics (followers, engagement)
+        - Does NOT perform OAuth to social platforms
+        
+        **For social verification:**
+        Social account verification is handled by a completely independent backend service with its own OAuth flows. After logging into AW3 via this endpoint, users can separately verify their social accounts through `/creator/profile/social-verification` or `/social/*` endpoints.
       operationId: verifySignature
       requestBody:
         required: true
@@ -2511,10 +2626,29 @@ paths:
   /auth/register:
     post:
       tags: [Auth]
-      summary: Register new user (simplified flow)
+      summary: Register new user on AW3 platform
       description: |
-        Simplified registration requiring only essential fields, assuming the user is already authenticated via Privy (email/social login or wallet).
-        Optional profile fields should be completed later via profile update endpoint.
+        **Purpose:** Create a new user account on the AW3 platform after Privy authentication.
+        
+        **Prerequisites:**
+        User must be authenticated via Privy using one of:
+        - Gmail (social login via Privy)
+        - Twitter (social login via Privy - NOTE: This is for AW3 platform login, NOT social verification)
+        - Wallet (MetaMask, WalletConnect, etc.)
+        
+        **Registration Flow:**
+        1. User authenticates to AW3 via Privy (email/social/wallet)
+        2. This endpoint registers user with essential fields (role, wallet address, terms acceptance)
+        3. Optional profile fields completed later via `/creator/profile/me` PUT endpoint
+        
+        **Important Distinction:**
+        - Privy Twitter login = User logs into AW3 platform using their Twitter account (via Privy OAuth)
+        - Social Verification = User proves ownership of Twitter/Discord/Telegram for campaign metrics
+        
+        These are TWO SEPARATE processes:
+        - A user can log into AW3 with Gmail (via Privy) but verify their Twitter account for social metrics
+        - A user can log into AW3 with Wallet but verify multiple social platforms (Twitter, Discord, Telegram)
+        - Social verification is handled by an independent service at `/creator/profile/social-verification`
       operationId: register
       requestBody:
         required: true
@@ -2538,7 +2672,12 @@ paths:
   /auth/refresh:
     post:
       tags: [Auth]
-      summary: Refresh JWT token
+      summary: Refresh AW3 platform access token
+      description: |
+        Refresh the JWT access token for continued access to AW3 platform APIs.
+        
+        **Note:** This only refreshes AW3 platform authentication tokens.
+        Social verification tokens (if any) are managed separately by the social verification service.
       operationId: refreshToken
       requestBody:
         required: true
@@ -2563,7 +2702,12 @@ paths:
   /auth/logout:
     post:
       tags: [Auth]
-      summary: Logout user
+      summary: Logout from AW3 platform
+      description: |
+        Logout user from AW3 platform and invalidate access/refresh tokens.
+        
+        **Note:** This only logs out from AW3 platform. 
+        Social account verifications remain valid and do not need to be re-verified after logout/login.
       operationId: logout
       security:
         - bearerAuth: []
@@ -2574,7 +2718,11 @@ paths:
   /auth/nonce/{walletAddress}:
     get:
       tags: [Auth]
-      summary: Get nonce for wallet
+      summary: Get nonce for wallet authentication to AW3 platform
+      description: |
+        Retrieve or generate a nonce for wallet signature authentication to AW3 platform.
+        
+        **Purpose:** Platform authentication only, not for social verification.
       operationId: getNonce
       parameters:
         - name: walletAddress
@@ -2636,7 +2784,50 @@ paths:
   /creator/profile/social-verification:
     post:
       tags: [Creator Profile]
-      summary: Verify social media account (independent service)
+      summary: Initiate social account verification (independent service)
+      description: |
+        **CRITICAL ARCHITECTURE NOTE: This is a COMPLETELY SEPARATE service from Privy authentication**
+        
+        **Purpose:**
+        Verify ownership of social media accounts (Twitter, Discord, Telegram) and fetch metrics (followers, engagement rates) for campaign matching and CVPI calculation.
+        
+        **Architecture:**
+        1. **Independent Backend Service**: Social verification is handled by a dedicated microservice, NOT Privy
+        2. **Own OAuth Implementation**: This service implements its own OAuth 2.0 flows to each platform
+        3. **Direct Platform API Calls**: Fetches metrics directly from Twitter API, Discord API, Telegram API
+        4. **No Privy Dependency**: Does NOT use Privy for social OAuth or token management
+        
+        **Verification Flow:**
+        1. User (already logged into AW3 via Privy) requests social verification
+        2. Social verification service generates platform-specific OAuth URL
+        3. User redirects to Twitter/Discord/Telegram for authorization
+        4. Platform redirects back to social verification service callback
+        5. Service exchanges authorization code for access token (own OAuth implementation)
+        6. Service fetches social metrics (followers, engagement) from platform API
+        7. Service stores verification data (hashed user ID, public metrics only)
+        8. Tokens discarded after initial fetch (MVP: one-time verification, no continuous monitoring)
+        
+        **What Gets Stored:**
+        - Platform (Twitter/Discord/Telegram)
+        - Handle/username
+        - Follower count (at verification time)
+        - Engagement rate (calculated from public posts)
+        - Verification timestamp
+        
+        **What Does NOT Get Stored:**
+        - OAuth access/refresh tokens (discarded after fetch in MVP)
+        - Private messages or DMs
+        - Email, phone, or personal information
+        
+        **Example Scenario:**
+        - User logs into AW3 with Gmail (via Privy) ← Platform authentication
+        - User then verifies Twitter account (via independent social verification service) ← Social metrics
+        - These are TWO COMPLETELY SEPARATE authentication flows
+        
+        **Related Endpoints:**
+        For the full OAuth flow, see:
+        - `GET /social/{platform}/authorize-url` - Get OAuth URL for platform
+        - `GET /social/callback` - Handle OAuth callback from platform
       operationId: verifySocialAccount
       security:
         - bearerAuth: []
@@ -2654,73 +2845,379 @@ paths:
                   $ref: '#/components/schemas/SocialPlatform'
                 handle:
                   type: string
+                  example: "@cryptoinfluencer"
+                  description: Social media handle to verify
                 verificationCode:
                   type: string
+                  description: Optional verification code (if using code-based verification instead of OAuth)
       responses:
         '200':
-          description: Verification initiated via the dedicated social verification backend, which performs its own OAuth with Twitter/Discord/Telegram and fetches metrics (followers, engagement) directly from platform APIs. This flow is decoupled from Privy authentication.
+          description: |
+            Social verification initiated successfully via the independent social verification backend service.
+            
+            The service will:
+            1. Perform OAuth with Twitter/Discord/Telegram (own implementation, NOT Privy)
+            2. Fetch metrics (followers, engagement) directly from platform APIs
+            3. Store verification data (no long-term token storage in MVP)
+            
+            This flow is completely decoupled from Privy authentication.
+
+  # ============ SOCIAL VERIFICATION SERVICE ENDPOINTS ============
+  # These endpoints are part of the INDEPENDENT social verification service
+  # NOT part of Privy authentication - completely separate OAuth implementation
+  
+  /social/{platform}/authorize-url:
+    get:
+      tags: [Creator Profile]
+      summary: Get OAuth authorization URL for social platform
+      description: |
+        **Independent Social Verification Service**
+        
+        Generate platform-specific OAuth authorization URL for social account verification.
+        This is handled by the independent social verification service, NOT Privy.
+        
+        **Architecture:**
+        - Independent backend service generates OAuth URL with PKCE
+        - Stores state parameter and code verifier in session/Redis
+        - Returns URL for frontend to redirect user to platform
+        
+        **Flow:**
+        1. Frontend calls this endpoint
+        2. Backend generates OAuth URL with proper scopes (read profile, followers)
+        3. Frontend redirects user to returned URL
+        4. User authorizes on Twitter/Discord/Telegram
+        5. Platform redirects to `/social/callback`
+        
+        **Supported Platforms:**
+        - twitter: Twitter/X OAuth 2.0
+        - discord: Discord OAuth 2.0
+        - telegram: Telegram Bot OAuth
+        
+        **Important:**
+        This OAuth flow is completely separate from Privy. If a user logged into AW3 using Twitter via Privy, they still need to go through this separate OAuth flow to verify their Twitter account for social metrics.
+      operationId: getSocialAuthUrl
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: platform
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [twitter, discord, telegram, instagram, youtube, tiktok]
+          example: twitter
+      responses:
+        '200':
+          description: OAuth authorization URL generated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          authUrl:
+                            type: string
+                            example: "https://twitter.com/i/oauth2/authorize?response_type=code&client_id=xxx&redirect_uri=https://api.aw3.io/social/callback&scope=tweet.read%20users.read%20offline.access&state=xxx&code_challenge=xxx&code_challenge_method=S256"
+                            description: OAuth authorization URL - frontend should redirect user to this URL
+                          state:
+                            type: string
+                            description: CSRF protection state parameter (stored server-side)
+                          platform:
+                            type: string
+                            example: twitter
+        '401':
+          description: User not authenticated to AW3 platform
+        '400':
+          description: Invalid or unsupported platform
+
+  /social/callback:
+    get:
+      tags: [Creator Profile]
+      summary: Handle OAuth callback from social platform
+      description: |
+        **Independent Social Verification Service - OAuth Callback Handler**
+        
+        This endpoint receives the OAuth callback from Twitter/Discord/Telegram after user authorization.
+        Handled entirely by the independent social verification service, NOT Privy.
+        
+        **Backend Processing:**
+        1. Validates state parameter (CSRF protection)
+        2. Exchanges authorization code for access token (own OAuth implementation)
+        3. Fetches user profile and metrics from platform API
+        4. Stores verification data (hashed user ID, public metrics)
+        5. Discards tokens (MVP: one-time verification only)
+        6. Redirects user back to AW3 frontend with success/error
+        
+        **Twitter API Calls (Example):**
+        - POST https://api.twitter.com/2/oauth2/token (exchange code for token)
+        - GET https://api.twitter.com/2/users/me?user.fields=public_metrics (fetch profile and followers)
+        
+        **Data Fetched:**
+        - Twitter: followers_count, following_count, tweet_count, engagement rate
+        - Discord: username, discriminator, guilds owned, total members
+        - Telegram: username, channel subscribers
+        
+        **Data Storage:**
+        - Platform and handle (for display)
+        - Follower count (at verification time)
+        - Verification timestamp
+        - Hashed platform user ID (privacy protection)
+        - NO OAuth tokens stored in MVP (one-time verification)
+        
+        **Security:**
+        - State parameter validation prevents CSRF attacks
+        - PKCE code verifier prevents authorization code interception
+        - All token exchange happens server-side only
+        - Tokens never exposed to frontend
+      operationId: handleSocialCallback
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Authorization code from OAuth provider
+        - name: state
+          in: query
+          required: true
+          schema:
+            type: string
+          description: State parameter for CSRF protection
+        - name: error
+          in: query
+          schema:
+            type: string
+          description: Error code if user denied authorization
+        - name: error_description
+          in: query
+          schema:
+            type: string
+          description: Human-readable error description
+      responses:
+        '302':
+          description: |
+            Redirect to AW3 frontend with verification result
+            
+            Success: /creator/profile?social_verification=success&platform=twitter
+            Error: /creator/profile?social_verification=error&platform=twitter&error=access_denied
+        '400':
+          description: Invalid state parameter or authorization code
+        '500':
+          description: Failed to fetch metrics from platform API
+
+  /social/status:
+    get:
+      tags: [Creator Profile]
+      summary: Get social verification status for all platforms
+      description: |
+        Retrieve verification status and metrics for all social platforms linked to the authenticated creator.
+        
+        **Returns:**
+        - List of verified social accounts
+        - Current follower counts (as of last verification)
+        - Verification timestamps
+        - Data freshness indicators
+        
+        **Note:** In MVP, data is from one-time verification. Shows "X days old" indicator.
+      operationId: getSocialStatus
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Social verification status retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          socialAccounts:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                platform:
+                                  type: string
+                                  enum: [twitter, discord, telegram, instagram, youtube]
+                                handle:
+                                  type: string
+                                  example: "@cryptoinfluencer"
+                                verified:
+                                  type: boolean
+                                  example: true
+                                followersCount:
+                                  type: integer
+                                  example: 125000
+                                engagementRate:
+                                  type: number
+                                  format: float
+                                  example: 8.5
+                                  description: Percentage engagement rate
+                                verifiedAt:
+                                  type: string
+                                  format: date-time
+                                  example: "2025-12-15T08:30:00Z"
+                                daysOld:
+                                  type: integer
+                                  example: 5
+                                  description: Days since verification (data freshness indicator)
+                                requiresReverification:
+                                  type: boolean
+                                  example: false
+                                  description: True if data is older than 90 days
+
+  /social/{platform}/disconnect:
+    delete:
+      tags: [Creator Profile]
+      summary: Disconnect and remove social account verification
+      description: |
+        Remove social account verification data for the specified platform.
+        
+        **What gets deleted:**
+        - Verification record
+        - Stored metrics (followers, engagement)
+        - Any associated data
+        
+        **GDPR/Privacy Compliance:**
+        This endpoint supports user's right to deletion.
+      operationId: disconnectSocialAccount
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: platform
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [twitter, discord, telegram, instagram, youtube, tiktok]
+      responses:
+        '200':
+          description: Social account disconnected successfully
+        '404':
+          description: No verification found for this platform
 
   # ============ CREATOR CAMPAIGNS ENDPOINTS ============
   /creator/campaigns:
     get:
       tags: [Creator Campaigns]
-      summary: Browse active campaigns with simplified list response
-      description: Returns campaigns with only essential overview fields. Detailed data available in campaign detail endpoint.
+      summary: Browse active campaigns with UI-aligned filtering
+      description: |
+        Returns campaigns with only essential overview fields. Detailed data available in campaign detail endpoint.
+        
+        **Important Note:**
+        This endpoint does NOT include matchRate in the response. The server cannot calculate match rate because it requires comparison between the user's profile and each campaign's criteria. Match rate must be calculated on the frontend based on:
+        - User's profile data (reputation, follower count, verified accounts, etc.)
+        - Campaign criteria (requirements, target audience, qualifications)
+        
+        **UI Alignment:**
+        All filter parameters support multi-select to match UI behavior. Frontend should send multiple values as comma-separated or repeated query parameters.
+        
+        **Example Query:**
+        ```
+        GET /creator/campaigns?keyword=NFT&vertical=2&vertical=3&deliverables=1&deliverables=2&duration=1&duration=2&stage=2&page=0&size=20
+        ```
+        
+        **Parameter Mappings:**
+        - vertical: 1=DeFi, 2=NFT, 3=Gaming, 4=Infrastructure, 5=L2, 6=DAO, 7=Metaverse, 8=Trading, 9=Other
+        - deliverables: 1=Twitter Posts, 2=Videos, 3=Articles, 4=AMAs, 5=Discord Management, 6=Community Giveaways, 7=Instagram Post, 8=TikTok
+        - duration: 1=Less Than 1 Week, 2=1-2 Weeks, 3=2-4 Weeks, 4=1-3 Months, 5=3+ Months
+        - stage: 1=Ideation, 2=Live Configuration, 3=Notification Preferences, 4=Privacy Controls, 5=Wallet & Payout, 6=Security
       operationId: browseCreatorCampaigns
       security:
         - bearerAuth: []
       parameters:
         - name: keyword
           in: query
-          description: Keyword search against campaign title/description
+          description: |
+            Keyword search against campaign title and description.
+            UI: Search input field at top of campaigns list.
+          required: false
           schema:
             type: string
+            example: "NFT marketing"
         - name: vertical
           in: query
-          description: Filter by vertical (multi-select). Uses FocusArea enum values [1-9] matching UI labels (DeFi, NFT, Gaming, Infrastructure, L2, DAO, Metaverse, Trading, Other).
+          description: |
+            Filter by vertical/focus area (multi-select).
+            UI: "Vertical" filter section with checkboxes.
+            Values: 1=DeFi, 2=NFT, 3=Gaming, 4=Infrastructure, 5=L2, 6=DAO, 7=Metaverse, 8=Trading, 9=Other
+          required: false
           schema:
             type: array
             items:
               $ref: '#/components/schemas/FocusArea'
-            style: form
-            explode: true
+          style: form
+          explode: true
+          example: [2, 3]
         - name: deliverables
           in: query
-          description: Filter by deliverable types (multi-select). Uses DeliverableType enum values [1-8].
+          description: |
+            Filter by deliverable types (multi-select).
+            UI: "Deliverables" filter section with checkboxes.
+            Values: 1=Twitter Posts, 2=Videos, 3=Articles, 4=AMAs, 5=Discord Management, 6=Community Giveaways, 7=Instagram Post, 8=TikTok
+          required: false
           schema:
             type: array
             items:
               $ref: '#/components/schemas/DeliverableType'
-            style: form
-            explode: true
+          style: form
+          explode: true
+          example: [1, 2]
         - name: duration
           in: query
-          description: Filter by campaign duration (multi-select). Uses CampaignDuration enum values [1-5].
+          description: |
+            Filter by campaign duration (multi-select).
+            UI: "Duration" filter section with checkboxes.
+            Values: 1=Less Than 1 Week, 2=1-2 Weeks, 3=2-4 Weeks, 4=1-3 Months, 5=3+ Months
+          required: false
           schema:
             type: array
             items:
               $ref: '#/components/schemas/CampaignDuration'
-            style: form
-            explode: true
+          style: form
+          explode: true
+          example: [1, 2]
         - name: stage
           in: query
-          description: Filter by campaign stage (multi-select). Uses CampaignStage enum values [1-6].
+          description: |
+            Filter by campaign stage (multi-select).
+            UI: "Stage" filter section with checkboxes.
+            Values: 1=Ideation, 2=Live Configuration, 3=Notification Preferences, 4=Privacy Controls, 5=Wallet & Payout, 6=Security
+          required: false
           schema:
             type: array
             items:
               $ref: '#/components/schemas/CampaignStage'
-            style: form
-            explode: true
+          style: form
+          explode: true
+          example: [2, 3]
         - name: page
           in: query
+          description: Page number for pagination (zero-indexed)
+          required: false
           schema:
             type: integer
             default: 0
+            minimum: 0
+          example: 0
         - name: size
           in: query
+          description: Number of items per page
+          required: false
           schema:
             type: integer
             default: 20
+            minimum: 1
+            maximum: 100
+          example: 20
       responses:
         '200':
           description: Campaigns list with simplified fields
@@ -3141,13 +3638,34 @@ paths:
   /creator/settings/notification:
     get:
       tags: [Creator Settings]
-      summary: Get notification settings
+      summary: Get notification preferences
+      description: |
+        Get notification preferences for email and push notifications.
+        
+        **Email Notifications:**
+        - New campaign matches
+        - Application status updates
+        - Payment received
+        - Messages from clients
+        - Community interactions
+        - Platform announcements
+        
+        **Push Notifications:**
+        - Real-time messages
+        - Campaign deadlines
+        - Payment confirmations
+        - Milestone reminders
+        
+        **Notification Frequency:**
+        - instant: Receive notifications immediately
+        - daily_digest: Once per day summary
+        - weekly_summary: Once per week summary
       operationId: getNotificationSettings
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Notification settings
+          description: Notification settings retrieved successfully
           content:
             application/json:
               schema:
@@ -3157,9 +3675,29 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/NotificationSettings'
+              example:
+                success: true
+                data:
+                  email:
+                    newCampaignMatches: true
+                    applicationStatusUpdates: false
+                    paymentReceived: true
+                    messagesFromClients: true
+                    communityInteractions: false
+                    platformAnnouncements: false
+                  push:
+                    realTimeMessages: true
+                    campaignDeadlines: true
+                    paymentConfirmations: false
+                    milestoneReminders: false
+                  frequency: instant
     post:
       tags: [Creator Settings]
-      summary: Update notification settings
+      summary: Update notification preferences
+      description: |
+        Update notification preferences for email and push notifications.
+        
+        All fields are required in the request body. Set boolean values to true/false to enable/disable specific notification types.
       operationId: updateNotificationSettings
       security:
         - bearerAuth: []
@@ -3169,20 +3707,53 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/NotificationSettings'
+            example:
+              email:
+                newCampaignMatches: true
+                applicationStatusUpdates: false
+                paymentReceived: true
+                messagesFromClients: true
+                communityInteractions: false
+                platformAnnouncements: false
+              push:
+                realTimeMessages: true
+                campaignDeadlines: true
+                paymentConfirmations: false
+                milestoneReminders: false
+              frequency: instant
       responses:
         '200':
-          description: Settings updated
+          description: Notification settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                message: Notification settings updated successfully
 
   /creator/settings/privacy:
     get:
       tags: [Creator Settings]
       summary: Get privacy settings
+      description: |
+        Get privacy settings for profile visibility and information sharing.
+        
+        **Profile Visibility Options:**
+        - PUBLIC: Profile visible to everyone
+        - PRIVATE: Profile only visible to you
+        - CONNECTIONS_ONLY: Profile visible to connected users only
+        
+        **Information Sharing:**
+        - showEarnings: Display earnings on public profile
+        - showCompletedCampaigns: Display completed campaign count
+        - showSocialAccounts: Display verified social accounts
       operationId: getPrivacySettings
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Privacy settings
+          description: Privacy settings retrieved successfully
           content:
             application/json:
               schema:
@@ -3192,9 +3763,20 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/PrivacySettings'
+              example:
+                success: true
+                data:
+                  profileVisibility: PUBLIC
+                  showEarnings: false
+                  showCompletedCampaigns: true
+                  showSocialAccounts: true
     post:
       tags: [Creator Settings]
       summary: Update privacy settings
+      description: |
+        Update privacy settings for profile visibility and information sharing.
+        
+        profileVisibility is required. Other fields are optional and default to false if not provided.
       operationId: updatePrivacySettings
       security:
         - bearerAuth: []
@@ -3204,20 +3786,47 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/PrivacySettings'
+            example:
+              profileVisibility: PUBLIC
+              showEarnings: false
+              showCompletedCampaigns: true
+              showSocialAccounts: true
       responses:
         '200':
-          description: Settings updated
+          description: Privacy settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                message: Privacy settings updated successfully
 
   /creator/settings/security:
     get:
       tags: [Creator Settings]
-      summary: Get security settings
+      summary: Get security settings (Privy-managed)
+      description: |
+        **IMPORTANT: Security and Wallet settings are managed by Privy.**
+        
+        This endpoint is deprecated. Security features including:
+        - Two-factor authentication (2FA)
+        - Login alerts
+        - Trusted devices
+        - Wallet management
+        
+        Are all handled by Privy's authentication system. Please use Privy's dashboard and APIs for security management.
+        
+        For security settings, direct users to:
+        - Privy Dashboard: https://dashboard.privy.io
+        - Privy Security Docs: https://docs.privy.io/security/overview
+      deprecated: true
       operationId: getSecuritySettings
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: Security settings
+          description: Security settings (managed by Privy)
           content:
             application/json:
               schema:
@@ -3226,10 +3835,22 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/SecuritySettings'
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: Security settings are managed by Privy. Please use Privy dashboard for security configuration.
+                          privyDashboard:
+                            type: string
+                            example: https://dashboard.privy.io
     post:
       tags: [Creator Settings]
-      summary: Update security settings
+      summary: Update security settings (Privy-managed)
+      description: |
+        **IMPORTANT: Security settings are managed by Privy.**
+        
+        This endpoint is deprecated. Please use Privy's authentication system to manage security settings.
+      deprecated: true
       operationId: updateSecuritySettings
       security:
         - bearerAuth: []
