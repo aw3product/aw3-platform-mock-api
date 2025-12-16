@@ -15,11 +15,17 @@ app.use(express.json());
 // Load Swagger document
 const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
 
-// Serve Swagger UI
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+// Serve Swagger UI with CDN assets for serverless compatibility
+const swaggerOptions = {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "AW3 Platform API Documentation"
-}));
+  customSiteTitle: "AW3 Platform API Documentation",
+  customCssUrl: 'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.9.0/swagger-ui.min.css',
+  customJs: [
+    'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.9.0/swagger-ui-bundle.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.9.0/swagger-ui-standalone-preset.min.js'
+  ]
+};
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, swaggerOptions));
 
 // Serve raw swagger files
 app.get('/swagger.yaml', (req, res) => {
