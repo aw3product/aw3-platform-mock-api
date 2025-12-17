@@ -179,67 +179,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// ============ AUTH ENDPOINTS ============
-app.post('/api/auth/wallet-connect', (req, res) => {
-  const { walletAddress, chainId, walletType } = req.body;
-  res.json(apiResponse({
-    walletAddress,
-    nonce: uuidv4(),
-    message: `Welcome to AW3 Platform!\n\nSign this message to authenticate.\n\nWallet: ${walletAddress}\nChain ID: ${chainId || '1'}\nNonce: ${uuidv4()}`,
-    expiresAt: Date.now() + 300000
-  }));
-});
-
-app.post('/api/auth/verify-signature', (req, res) => {
-  const { walletAddress, signature, nonce } = req.body;
-  res.json(apiResponse({
-    accessToken: 'mock_access_token_' + uuidv4(),
-    refreshToken: 'mock_refresh_token_' + uuidv4(),
-    tokenType: 'Bearer',
-    expiresIn: 3600,
-    user: {
-      userId: uuidv4(),
-      walletAddress,
-      role: 1,
-      displayName: 'Demo Creator',
-      profileComplete: false
-    }
-  }));
-});
-
-app.post('/api/auth/register', (req, res) => {
-  const { walletAddress, role, termsAccepted } = req.body;
-  res.json(apiResponse({
-    userId: uuidv4(),
-    walletAddress,
-    role,
-    accessToken: 'mock_access_token_' + uuidv4(),
-    refreshToken: 'mock_refresh_token_' + uuidv4(),
-    expiresIn: 3600,
-    profileComplete: false,
-    nextSteps: ['Complete profile', 'Verify social accounts', 'Browse campaigns']
-  }));
-});
-
-app.post('/api/auth/refresh', (req, res) => {
-  res.json(apiResponse({
-    accessToken: 'mock_access_token_' + uuidv4(),
-    expiresIn: 3600
-  }));
-});
-
-app.post('/api/auth/logout', (req, res) => {
-  res.json(apiResponse({ message: 'Logged out successfully' }));
-});
-
-app.get('/api/auth/nonce/:walletAddress', (req, res) => {
-  res.json(apiResponse({
-    walletAddress: req.params.walletAddress,
-    nonce: uuidv4()
-  }));
-});
-
 // ============ CREATOR PROFILE ENDPOINTS ============
+// NOTE: Authentication is handled entirely by Privy on the frontend.
+// Backend validates the Privy ACCESS_TOKEN from the Authorization header.
+// No /auth/* endpoints are needed.
 app.get('/api/creator/profile/me', (req, res) => {
   res.json(apiResponse({
     userId: uuidv4(),

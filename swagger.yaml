@@ -6,16 +6,16 @@ info:
     
     ## Authentication Architecture
     
-    **IMPORTANT: Two Separate Authentication Systems**
+    **Platform Authentication is handled entirely by Privy (Frontend)**
     
-    ### 1. Platform Authentication (Privy)
-    - **Purpose:** User login to access AW3 platform
-    - **Provider:** Privy
-    - **Methods:** Gmail, Twitter (via Privy social login), Wallet (MetaMask, WalletConnect, etc.)
-    - **Result:** JWT tokens for AW3 API access
-    - **Endpoints:** `/auth/*`
+    ### How it works:
+    - **Provider:** Privy (integrated on Creator Portal frontend)
+    - **Methods:** Gmail, Twitter, Wallet (MetaMask, WalletConnect, etc.)
+    - **Flow:** User authenticates via Privy → Privy issues ACCESS_TOKEN → Frontend sends token in `Authorization` header
+    - **Backend role:** Only validates the Privy ACCESS_TOKEN from the `Authorization` header
+    - **No backend auth endpoints needed:** Login, Register, Refresh, Logout are all handled by Privy SDK
     
-    ### 2. Social Verification (Independent Service)
+    ### Social Verification (Independent Service)
     - **Purpose:** Verify social accounts and fetch metrics for campaigns
     - **Provider:** Independent backend service (NOT Privy)
     - **Platforms:** Twitter, Discord, Telegram, Instagram, YouTube
@@ -24,9 +24,8 @@ info:
     - **Endpoints:** `/creator/profile/social-verification`, `/social/*`
     
     **Key Distinction:**
-    - A user can log into AW3 with Gmail but verify their Twitter account for metrics
-    - A user can log into AW3 with Twitter (via Privy) but STILL needs separate Twitter verification for social metrics
-    - These are completely independent flows with no dependency between them
+    - Privy authentication (platform login) is completely separate from social verification (campaign metrics)
+    - A user logs in via Privy, then separately verifies social accounts for campaign tracking
     
     ## User Roles
     CREATOR, PROJECTOR, ADMIN
@@ -51,21 +50,6 @@ servers:
     description: Local Development
 
 tags:
-  - name: Auth
-    description: |
-      AW3 Platform Authentication via Privy
-      
-      **Important Architecture Note:**
-      - **Privy** is used ONLY for AW3 platform authentication (user login to access AW3)
-      - Supports Gmail, Twitter social login (via Privy), and Wallet-based authentication
-      - Issues JWT tokens for AW3 platform access
-      
-      **Social Verification is COMPLETELY SEPARATE:**
-      - Social verification is handled by an independent backend service
-      - NOT part of Privy authentication flow
-      - Has its own OAuth implementation to Twitter/Discord/Telegram
-      - Fetches social metrics (followers, engagement) directly from platform APIs
-      - No dependency between Privy authentication and social verification
   - name: Creator Profile
     description: Creator profile management
   - name: Creator Campaigns
@@ -397,152 +381,6 @@ components:
         pageSize:
           type: integer
           example: 20
-
-    # ============ AUTH SCHEMAS ============
-    WalletConnectRequest:
-      type: object
-      required:
-        - walletAddress
-      properties:
-        walletAddress:
-          type: string
-          example: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
-        chainId:
-          type: string
-          example: "1"
-        walletType:
-          $ref: '#/components/schemas/WalletType'
-
-    WalletConnectResponse:
-      type: object
-      required:
-        - walletAddress
-        - nonce
-        - message
-        - expiresAt
-      properties:
-        walletAddress:
-          type: string
-        nonce:
-          type: string
-        message:
-          type: string
-          description: Message to sign with wallet
-        expiresAt:
-          type: integer
-          format: int64
-
-    VerifySignatureRequest:
-      type: object
-      required:
-        - walletAddress
-        - signature
-        - nonce
-      properties:
-        walletAddress:
-          type: string
-        signature:
-          type: string
-        nonce:
-          type: string
-
-    RegistrationRequest:
-      type: object
-      required:
-        - walletAddress
-        - signature
-        - nonce
-        - role
-        - termsAccepted
-      properties:
-        walletAddress:
-          type: string
-          example: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
-        signature:
-          type: string
-        nonce:
-          type: string
-        role:
-          $ref: '#/components/schemas/UserRole'
-        termsAccepted:
-          type: boolean
-          example: true
-
-    RegistrationResponse:
-      type: object
-      required:
-        - userId
-        - walletAddress
-        - role
-        - accessToken
-        - refreshToken
-        - expiresIn
-        - profileComplete
-      properties:
-        userId:
-          type: string
-          format: uuid
-        walletAddress:
-          type: string
-        role:
-          $ref: '#/components/schemas/UserRole'
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        expiresIn:
-          type: integer
-        profileComplete:
-          type: boolean
-        nextSteps:
-          type: array
-          items:
-            type: string
-          example: ["Complete profile", "Verify social accounts", "Browse campaigns"]
-
-    AuthResponse:
-      type: object
-      required:
-        - accessToken
-        - refreshToken
-        - tokenType
-        - expiresIn
-        - user
-      properties:
-        accessToken:
-          type: string
-        refreshToken:
-          type: string
-        tokenType:
-          type: string
-          example: Bearer
-        expiresIn:
-          type: integer
-          format: int64
-        user:
-          $ref: '#/components/schemas/UserInfo'
-
-    UserInfo:
-      type: object
-      required:
-        - userId
-        - walletAddress
-        - role
-        - profileComplete
-      properties:
-        userId:
-          type: string
-          format: uuid
-        walletAddress:
-          type: string
-        role:
-          $ref: '#/components/schemas/UserRole'
-        displayName:
-          type: string
-        profileComplete:
-          type: boolean
-        subscriptionTier:
-          type: string
 
     # ============ PROFILE SCHEMAS ============
     SocialAccount:
@@ -2962,196 +2800,10 @@ components:
           default: true
 
 paths:
-  # ============ AUTH ENDPOINTS ============
-  /auth/wallet-connect:
-    post:
-      tags: [Auth]
-      summary: Initiate AW3 platform login via Privy (wallet authentication)
-      description: |
-        **Purpose:** Authenticate user to AW3 platform using wallet signature through Privy.
-        
-        **Authentication Flow:**
-        1. User connects wallet (MetaMask, WalletConnect, etc.)
-        2. System generates a nonce for signature
-        3. User signs nonce with their wallet
-        4. Backend verifies signature via `/auth/verify-signature`
-        5. JWT tokens issued for AW3 platform access
-        
-        **This is NOT for social verification:**
-        - This endpoint only handles AW3 platform authentication
-        - Social account verification (Twitter, Discord, Telegram) is handled by a completely separate service
-        - See `/creator/profile/social-verification` and `/social/*` endpoints for social verification
-      operationId: walletConnect
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/WalletConnectRequest'
-      responses:
-        '200':
-          description: Nonce generated successfully
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/WalletConnectResponse'
-
-  /auth/verify-signature:
-    post:
-      tags: [Auth]
-      summary: Verify wallet signature and issue AW3 platform access tokens
-      description: |
-        **Purpose:** Complete wallet-based authentication to AW3 platform via Privy.
-        
-        **What this does:**
-        - Verifies the wallet signature against the nonce from `/auth/wallet-connect`
-        - Issues JWT access token and refresh token for AW3 platform
-        - Creates or updates user session
-        
-        **What this does NOT do:**
-        - Does NOT verify social media accounts (Twitter, Discord, Telegram)
-        - Does NOT fetch social metrics (followers, engagement)
-        - Does NOT perform OAuth to social platforms
-        
-        **For social verification:**
-        Social account verification is handled by a completely independent backend service with its own OAuth flows. After logging into AW3 via this endpoint, users can separately verify their social accounts through `/creator/profile/social-verification` or `/social/*` endpoints.
-      operationId: verifySignature
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifySignatureRequest'
-      responses:
-        '200':
-          description: Authentication successful
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/AuthResponse'
-
-  /auth/register:
-    post:
-      tags: [Auth]
-      summary: Register new user on AW3 platform
-      description: |
-        **Purpose:** Create a new user account on the AW3 platform after Privy authentication.
-        
-        **Prerequisites:**
-        User must be authenticated via Privy using one of:
-        - Gmail (social login via Privy)
-        - Twitter (social login via Privy - NOTE: This is for AW3 platform login, NOT social verification)
-        - Wallet (MetaMask, WalletConnect, etc.)
-        
-        **Registration Flow:**
-        1. User authenticates to AW3 via Privy (email/social/wallet)
-        2. This endpoint registers user with essential fields (role, wallet address, terms acceptance)
-        3. Optional profile fields completed later via `/creator/profile/me` PUT endpoint
-        
-        **Important Distinction:**
-        - Privy Twitter login = User logs into AW3 platform using their Twitter account (via Privy OAuth)
-        - Social Verification = User proves ownership of Twitter/Discord/Telegram for campaign metrics
-        
-        These are TWO SEPARATE processes:
-        - A user can log into AW3 with Gmail (via Privy) but verify their Twitter account for social metrics
-        - A user can log into AW3 with Wallet but verify multiple social platforms (Twitter, Discord, Telegram)
-        - Social verification is handled by an independent service at `/creator/profile/social-verification`
-      operationId: register
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RegistrationRequest'
-      responses:
-        '200':
-          description: Registration successful
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/RegistrationResponse'
-
-  /auth/refresh:
-    post:
-      tags: [Auth]
-      summary: Refresh AW3 platform access token
-      description: |
-        Refresh the JWT access token for continued access to AW3 platform APIs.
-        
-        **Note:** This only refreshes AW3 platform authentication tokens.
-        Social verification tokens (if any) are managed separately by the social verification service.
-      operationId: refreshToken
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - refreshToken
-              properties:
-                refreshToken:
-                  type: string
-      responses:
-        '200':
-          description: Token refreshed
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-
-  /auth/logout:
-    post:
-      tags: [Auth]
-      summary: Logout from AW3 platform
-      description: |
-        Logout user from AW3 platform and invalidate access/refresh tokens.
-        
-        **Note:** This only logs out from AW3 platform. 
-        Social account verifications remain valid and do not need to be re-verified after logout/login.
-      operationId: logout
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Logout successful
-
-  /auth/nonce/{walletAddress}:
-    get:
-      tags: [Auth]
-      summary: Get nonce for wallet authentication to AW3 platform
-      description: |
-        Retrieve or generate a nonce for wallet signature authentication to AW3 platform.
-        
-        **Purpose:** Platform authentication only, not for social verification.
-      operationId: getNonce
-      parameters:
-        - name: walletAddress
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Nonce retrieved
-
   # ============ CREATOR PROFILE ENDPOINTS ============
+  # NOTE: Authentication is handled entirely by Privy on the frontend.
+  # Backend validates the Privy ACCESS_TOKEN from the Authorization header.
+  # No /auth/* endpoints are needed.
   /creator/profile/me:
     get:
       tags: [Creator Profile]
